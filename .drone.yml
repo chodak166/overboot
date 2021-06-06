@@ -1,0 +1,22 @@
+kind: pipeline
+name: default
+
+steps:
+- name: build-obinit
+  image: chodak166/dev-cpp:focal-base-1.0
+  commands:
+  - git submodule init
+  - git submodule update
+  - cd obinit
+  - mkdir build
+  - cd build
+  - cmake
+    -D CMAKE_BUILD_TYPE=Release
+    ..
+  - cmake --build .
+
+- name: test-obinit
+  image: chodak166/dev-cpp:focal-base-1.0
+  commands:
+  - cd obinit/build
+  - ctest -V .
