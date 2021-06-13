@@ -19,4 +19,4 @@ add_executable(ObMountTest ${UNITY_SRC}
 
 #target_link_libraries(ObMountsTest linux)
 
-add_test(ObMountsTest ObMountsTest)
+add_test(ObMountTest ObMountTest)
