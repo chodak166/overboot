@@ -17,6 +17,7 @@ steps:
 
 - name: test-obinit
   image: chodak166/dev-cpp:focal-base-1.0
+  privileged: true
   commands:
   - cd obinit/build
   - ctest -V .
