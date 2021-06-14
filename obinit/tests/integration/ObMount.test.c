@@ -19,8 +19,9 @@
 
 
 #define TEST_ROOT_PATH            "/test_root"
+#define TEST_NOT_MOUNTED_PATH     "/no_mnt"
 #define TEST_DEVICE_IMAGE_PATH    "/dev/test_device.img"
-#define TEST_MOUNTED_FILE_PATH    "file.test"
+#define TEST_MOUNTED_FILE_PATH    "/file.test"
 #define TEST_MOUNTED_FILE_VALUE   "test_value_1"
 #define TEST_WRONG_DEVICE_PATH    "/dev/none"
 #define TEST_BIND_PATH            "/bind"
@@ -84,6 +85,7 @@ int mkpath(const char *path, mode_t mode)
 }
 
 
+
 #define OB_PREFIX_MAX 256
 #define OB_PATH_MAX 512
 #define OB_DEV_PATH_MAX 512
@@ -92,6 +94,18 @@ int mkpath(const char *path, mode_t mode)
 #define OB_DEV_IMAGE_FS "ext4"
 #define OB_DEV_MOUNT_FLAGS 0
 #define OB_DEV_MOUNT_OPTIONS ""
+
+
+bool helper_concatPaths(char* result, const char* pathA, const char* pathB)
+{
+  if (strlen(pathA) + strlen(pathB) > OB_PATH_MAX) {
+    fprintf(stderr, "Cannot concat %s and %s: result path too long\n", pathA, pathB);
+    return false;
+  }
+  strcpy(result, pathA);
+  strcat(result, pathB);
+  return true;
+}
 
 typedef struct ObContext
 {
@@ -215,7 +229,7 @@ bool obMountDevice(const ObContext* context)
 
 bool obUnmount(const char* path)
 {
-  int result = umount(path);
+  int result = umount2(path, MNT_DETACH);
   if (result != 0) {
     fprintf(stderr, "Cannot unmount %s: %s\n", path, strerror(errno));
     return false;
@@ -395,11 +409,13 @@ void test_obMountDevice_shouldFailWhenWrongPath()
   TEST_ASSERT_FALSE(result);
 }
 
-void test_obMountDevice_shouldFailWhenPathNotMounted()
+void test_obUnmount_shouldFailWhenPathNotMounted()
 {
-  ObContext context = helper_getObContext();
-  mkpath(context.devMountPoint, 0700);
-  bool result = obUnmountDevice(&context);
+  char path[OB_PATH_MAX];
+  helper_getSelfPath(path, OB_PATH_MAX);
+  strcat(path, TEST_NOT_MOUNTED_PATH);
+  mkpath(path, 0700);
+  bool result = obUnmount(path);
   TEST_ASSERT_FALSE(result);
 }
 
@@ -407,7 +423,7 @@ void test_obUnmountDevice_shouldUnmountMountedDevice()
 {
   ObContext context = helper_getObContext();
   char testFile[OB_PATH_MAX];
-  sprintf(testFile, "%s/%s", context.devMountPoint, TEST_MOUNTED_FILE_PATH);
+  helper_concatPaths(testFile, context.devMountPoint, TEST_MOUNTED_FILE_PATH);
 
   bool mntResult = obMountDevice(&context);
   bool umntResult = obUnmountDevice(&context);
@@ -430,7 +446,7 @@ void test_obRbind_shouldMakeFilesAccessibleAfterBind()
   obRbind(srcPath, dstPath);
 
   char imgFile[OB_PATH_MAX];
-  sprintf(imgFile, "%s%s", dstPath, TEST_DEVICE_IMAGE_PATH);
+  helper_concatPaths(imgFile, dstPath, TEST_DEVICE_IMAGE_PATH);
   int accessResult = access(imgFile, F_OK);
 
   obUnmount(dstPath);
@@ -447,7 +463,7 @@ void test_obMountTmpfs_shouldCreateDirAndMakeItWritable()
   obMountTmpfs(tmpfsPath);
 
   char testFile[OB_PATH_MAX];
-  sprintf(testFile, "%s/tmp_file", tmpfsPath);
+  helper_concatPaths(testFile, tmpfsPath, "/tmp_file");
   helper_createFile(testFile, TEST_TMP_FILE_VALUE);
 
   int accessResult = access(testFile, F_OK);
@@ -462,13 +478,14 @@ void test_obMountOverlay_shouldMergeAllGivenLayers()
   helper_getSelfPath(selfPath, OB_PATH_MAX);
 
   char mountPoint[OB_PATH_MAX];
-  sprintf(mountPoint, "%s%s", selfPath, TEST_LAYER_MOUNT_POINT);
+  strcpy(mountPoint, selfPath);
+  strcat(mountPoint, TEST_LAYER_MOUNT_POINT);
 
   char upper[OB_PATH_MAX];
-  sprintf(upper, "%s%s", selfPath, TEST_LAYER_UPPER);
+  helper_concatPaths(upper, selfPath, TEST_LAYER_UPPER);
 
   char work[OB_PATH_MAX];
-  sprintf(work, "%s%s", selfPath, TEST_LAYER_WORK);
+  helper_concatPaths(work, selfPath, TEST_LAYER_WORK);
 
   //char layers[2][OB_PATH_MAX];
   char** layers = malloc(sizeof(char*) * 2);
@@ -483,16 +500,16 @@ void test_obMountOverlay_shouldMergeAllGivenLayers()
 
   char filePath[OB_PATH_MAX];
 
-  sprintf(filePath, "%s%s", selfPath, TEST_LAYER_FILE_1);
+  helper_concatPaths(filePath, selfPath, TEST_LAYER_FILE_1);
   int accessFile1Result = access(filePath, F_OK);
 
-  sprintf(filePath, "%s%s", selfPath, TEST_LAYER_FILE_2);
+  helper_concatPaths(filePath, selfPath, TEST_LAYER_FILE_2);
   int accessFile2Result = access(filePath, F_OK);
 
   char content[16];
   helper_readFile(filePath, content);
 
-  sprintf(filePath, "%s%s", selfPath, TEST_LAYER_FILE_3);
+  helper_concatPaths(filePath, selfPath, TEST_LAYER_FILE_3);
   int accessFile3Result = access(filePath, F_OK);
 
   obUnmount(mountPoint);
