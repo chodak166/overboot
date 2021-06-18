@@ -1,5 +1,4 @@
 #include "unity.h"
-#define __STDC_WANT_LIB_EXT1__ 1
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -28,11 +27,12 @@
 #define TEST_TMPFS_PATH           "/tmpfs"
 #define TEST_TMP_FILE_VALUE       "tmp_test_value"
 
-#define TEST_LAYER_BOTTOM         "/layers/bottom"
-#define TEST_LAYER_MID            "/layers/mid"
-#define TEST_LAYER_UPPER          "/layers/upper"
-#define TEST_LAYER_WORK           "/layers/work"
+#define TEST_LAYER_BOTTOM         "/mount_layers/bottom"
+#define TEST_LAYER_MID            "/mount_layers/mid"
+#define TEST_LAYER_UPPER          "/mount_layers/upper"
+#define TEST_LAYER_WORK           "/mount_layers/work"
 #define TEST_LAYER_MOUNT_POINT    "/overlay"
+#define TEST_LAYER_MOUNT_POINT_2  "/overlay_moved"
 #define TEST_LAYER_FILE_1         "/overlay/file1"
 #define TEST_LAYER_FILE_2         "/overlay/file2"
 #define TEST_LAYER_FILE_3         "/overlay/file3"
@@ -265,7 +265,22 @@ bool obRbind(const char* srcPath, const char* dstPath)
 
   int result = mount(srcPath, dstPath, NULL, MS_BIND | MS_REC, "");
   if (result != 0) {
-    fprintf(stderr, "Cannot mount %s: %s\n", srcPath, strerror(errno));
+    fprintf(stderr, "Cannot bind %s: %s\n", srcPath, strerror(errno));
+    return false;
+  }
+
+  return true;
+}
+
+bool obMove(const char* srcPath, const char* dstPath)
+{
+  if (mkpath(dstPath, OB_DEV_MOUNT_MODE) != 0) {
+    return false;
+  }
+
+  int result = mount(srcPath, dstPath, NULL, MS_MOVE, "");
+  if (result != 0) {
+    fprintf(stderr, "Cannot move %s: %s\n", srcPath, strerror(errno));
     return false;
   }
 
@@ -452,6 +467,14 @@ void test_obRbind_shouldMakeFilesAccessibleAfterBind()
   obUnmount(dstPath);
 
   TEST_ASSERT_TRUE(accessResult == 0);
+}
+
+void test_obMove_shouldMakeFilesAccessibleInDestination()
+{
+}
+
+void test_obMove_shouldMakeFilesInaccessibleInSource()
+{
 }
 
 void test_obMountTmpfs_shouldCreateDirAndMakeItWritable()

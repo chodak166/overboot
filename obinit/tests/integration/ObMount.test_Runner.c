@@ -93,14 +93,14 @@ static void run_test(UnityTestFunction func, const char* name, UNITY_LINE_TYPE l
 int main(void)
 {
   UnityBegin("../../../tests/integration/ObMount.test.c");
-  run_test(test_obMountDevice_shouldMakeFilesReadableAfterImageMount, "test_obMountDevice_shouldMakeFilesReadableAfterImageMount", 374);
-  run_test(test_obMountDevice_shouldMakeFilesReadableAfterDeviceMount, "test_obMountDevice_shouldMakeFilesReadableAfterDeviceMount", 386);
-  run_test(test_obMountDevice_shouldFailWhenWrongPath, "test_obMountDevice_shouldFailWhenWrongPath", 404);
-  run_test(test_obUnmount_shouldFailWhenPathNotMounted, "test_obUnmount_shouldFailWhenPathNotMounted", 412);
-  run_test(test_obUnmountDevice_shouldUnmountMountedDevice, "test_obUnmountDevice_shouldUnmountMountedDevice", 422);
-  run_test(test_obRbind_shouldMakeFilesAccessibleAfterBind, "test_obRbind_shouldMakeFilesAccessibleAfterBind", 436);
-  run_test(test_obMountTmpfs_shouldCreateDirAndMakeItWritable, "test_obMountTmpfs_shouldCreateDirAndMakeItWritable", 457);
-  run_test(test_obMountOverlay_shouldMergeAllGivenLayers, "test_obMountOverlay_shouldMergeAllGivenLayers", 475);
+  run_test(test_obMountDevice_shouldMakeFilesReadableAfterImageMount, "test_obMountDevice_shouldMakeFilesReadableAfterImageMount", 373);
+  run_test(test_obMountDevice_shouldMakeFilesReadableAfterDeviceMount, "test_obMountDevice_shouldMakeFilesReadableAfterDeviceMount", 385);
+  run_test(test_obMountDevice_shouldFailWhenWrongPath, "test_obMountDevice_shouldFailWhenWrongPath", 403);
+  run_test(test_obUnmount_shouldFailWhenPathNotMounted, "test_obUnmount_shouldFailWhenPathNotMounted", 411);
+  run_test(test_obUnmountDevice_shouldUnmountMountedDevice, "test_obUnmountDevice_shouldUnmountMountedDevice", 421);
+  run_test(test_obRbind_shouldMakeFilesAccessibleAfterBind, "test_obRbind_shouldMakeFilesAccessibleAfterBind", 435);
+  run_test(test_obMountTmpfs_shouldCreateDirAndMakeItWritable, "test_obMountTmpfs_shouldCreateDirAndMakeItWritable", 456);
+  run_test(test_obMountOverlay_shouldMergeAllGivenLayers, "test_obMountOverlay_shouldMergeAllGivenLayers", 474);
 
   return UnityEnd();
 }
