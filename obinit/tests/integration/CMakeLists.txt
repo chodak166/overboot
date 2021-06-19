@@ -20,9 +20,9 @@ add_executable(${TEST_TARGET} ${UNITY_SRC}
 add_test(${TEST_TARGET} ${TEST_TARGET})
 
 
-set(TEST_TARGET ObLayersTest)
+set(TEST_TARGET ObInitTest)
 add_executable(${TEST_TARGET} ${UNITY_SRC}
-    ObLayers.test.c
-    ObLayers.test_Runner.c
+    ObInit.test.c
+    ObInit.test_Runner.c
     )
 add_test(${TEST_TARGET} ${TEST_TARGET})
