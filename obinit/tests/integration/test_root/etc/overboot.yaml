@@ -1,0 +1,18 @@
+enabled: true
+layers:
+  visible: true
+  device: "/dev/sdb1"
+  repository: "overboot"
+  head: "2020-12-01-head-layer"
+upper:
+  type: "tmpfs"
+  size: "50%"
+#upper:
+  #type: "persistent"
+#upper:
+  #type: "volatile"
+durables:
+    - path: "/var/log"
+      copy_origin: false
+    - path: "/etc/netplan"
+      copy_origin: true
