@@ -1,16 +1,13 @@
 #include "unity.h"
+#include "ob/ObDefs.h"
 
 #include <stdbool.h>
 
-#define OB_PREFIX_MAX 256
-#define OB_PATH_MAX 512
-#define OB_NAME_MAX 255
-#define OB_DEV_PATH_MAX 512
-#define OB_DEV_MOUNT_POINT "/ob_device"
-#define OB_DEV_MOUNT_MODE 0700
-#define OB_DEV_IMAGE_FS "ext4"
-#define OB_DEV_MOUNT_FLAGS 0
-#define OB_DEV_MOUNT_OPTIONS ""
+typedef struct ObDurable
+{
+  char name[OB_NAME_MAX];
+  char path[OB_PATH_MAX];
+} ObDurable;
 
 typedef struct ObInitConfig
 {
@@ -19,11 +16,86 @@ typedef struct ObInitConfig
   bool useTmpfs;
   char tmpfsSize[16];
   bool cleanUpperLayer;
-  bool enableManagement;
+  bool bindRepository;
   char headLayer[OB_NAME_MAX];
 } ObInitConfig;
 
-void test_xxx()
+void test_obInitializeOverboot_shouldMountDataDevice()
+{
+
+}
+
+void test_obInitializeOverboot_shouldPrepareOverlayDirectory()
+{
+
+}
+
+void test_obInitializeOverboot_shouldUseTmpfsIfConfigured()
+{
+
+}
+
+void test_obInitializeOverboot_shouldSetTmpfsSize()
+{
+
+}
+
+void test_obInitializeOverboot_shouldClearUpperIfConfigured()
+{
+
+}
+
+void test_obInitializeOverboot_shouldMoveRootfs()
+{
+
+}
+
+void test_obInitializeOverboot_shouldBindUpperLayerIfConfigured()
+{
+
+}
+
+void test_obInitializeOverboot_shouldMountOverlayFs()
+{
+
+}
+
+void test_obInitializeOverboot_shouldMountAllLayersRequiredByHeadLayer()
+{
+
+}
+
+void test_obInitializeOverboot_shouldBindOverlayDirectory()
+{
+
+}
+
+void test_obInitializeOverboot_shouldBindRepositoryIfConfigured()
+{
+
+}
+
+void test_obInitializeOverboot_shouldBindDurables()
+{
+
+}
+
+void test_obInitializeOverboot_shouldInitializeDurablesIfConfigured()
+{
+
+}
+
+void test_obInitializeOverboot_shouldNotInitializeDurablesIfConfigured()
+{
+
+}
+
+void test_obInitializeOverboot_shouldUpdateFstab()
+{
+
+}
+
+void test_obDeinitializeOverboot_shouldRestoreRootfs()
 {
 
 }

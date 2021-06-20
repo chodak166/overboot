@@ -2,11 +2,28 @@
 
 /*=======Automagically Detected Files To Include=====*/
 #include "unity.h"
+#include "ob/ObDefs.h"
+#include <stdbool.h>
 
 /*=======External Functions This Runner Calls=====*/
 extern void setUp(void);
 extern void tearDown(void);
-extern void test_xxx();
+extern void test_obInitializeOverboot_shouldMountDataDevice();
+extern void test_obInitializeOverboot_shouldPrepareOverlayDirectory();
+extern void test_obInitializeOverboot_shouldUseTmpfsIfConfigured();
+extern void test_obInitializeOverboot_shouldSetTmpfsSize();
+extern void test_obInitializeOverboot_shouldClearUpperIfConfigured();
+extern void test_obInitializeOverboot_shouldMoveRootfs();
+extern void test_obInitializeOverboot_shouldBindUpperLayerIfConfigured();
+extern void test_obInitializeOverboot_shouldMountOverlayFs();
+extern void test_obInitializeOverboot_shouldMountAllLayersRequiredByHeadLayer();
+extern void test_obInitializeOverboot_shouldBindOverlayDirectory();
+extern void test_obInitializeOverboot_shouldBindRepositoryIfConfigured();
+extern void test_obInitializeOverboot_shouldBindDurables();
+extern void test_obInitializeOverboot_shouldInitializeDurablesIfConfigured();
+extern void test_obInitializeOverboot_shouldNotInitializeDurablesIfConfigured();
+extern void test_obInitializeOverboot_shouldUpdateFstab();
+extern void test_obDeinitializeOverboot_shouldRestoreRootfs();
 
 
 /*=======Mock Management=====*/
@@ -74,7 +91,22 @@ static void run_test(UnityTestFunction func, const char* name, UNITY_LINE_TYPE l
 int main(void)
 {
   UnityBegin("../../../tests/integration/ObInit.test.c");
-  run_test(test_xxx, "test_xxx", 3);
+  run_test(test_obInitializeOverboot_shouldMountDataDevice, "test_obInitializeOverboot_shouldMountDataDevice", 23);
+  run_test(test_obInitializeOverboot_shouldPrepareOverlayDirectory, "test_obInitializeOverboot_shouldPrepareOverlayDirectory", 28);
+  run_test(test_obInitializeOverboot_shouldUseTmpfsIfConfigured, "test_obInitializeOverboot_shouldUseTmpfsIfConfigured", 33);
+  run_test(test_obInitializeOverboot_shouldSetTmpfsSize, "test_obInitializeOverboot_shouldSetTmpfsSize", 38);
+  run_test(test_obInitializeOverboot_shouldClearUpperIfConfigured, "test_obInitializeOverboot_shouldClearUpperIfConfigured", 43);
+  run_test(test_obInitializeOverboot_shouldMoveRootfs, "test_obInitializeOverboot_shouldMoveRootfs", 48);
+  run_test(test_obInitializeOverboot_shouldBindUpperLayerIfConfigured, "test_obInitializeOverboot_shouldBindUpperLayerIfConfigured", 53);
+  run_test(test_obInitializeOverboot_shouldMountOverlayFs, "test_obInitializeOverboot_shouldMountOverlayFs", 58);
+  run_test(test_obInitializeOverboot_shouldMountAllLayersRequiredByHeadLayer, "test_obInitializeOverboot_shouldMountAllLayersRequiredByHeadLayer", 63);
+  run_test(test_obInitializeOverboot_shouldBindOverlayDirectory, "test_obInitializeOverboot_shouldBindOverlayDirectory", 68);
+  run_test(test_obInitializeOverboot_shouldBindRepositoryIfConfigured, "test_obInitializeOverboot_shouldBindRepositoryIfConfigured", 73);
+  run_test(test_obInitializeOverboot_shouldBindDurables, "test_obInitializeOverboot_shouldBindDurables", 78);
+  run_test(test_obInitializeOverboot_shouldInitializeDurablesIfConfigured, "test_obInitializeOverboot_shouldInitializeDurablesIfConfigured", 83);
+  run_test(test_obInitializeOverboot_shouldNotInitializeDurablesIfConfigured, "test_obInitializeOverboot_shouldNotInitializeDurablesIfConfigured", 88);
+  run_test(test_obInitializeOverboot_shouldUpdateFstab, "test_obInitializeOverboot_shouldUpdateFstab", 93);
+  run_test(test_obDeinitializeOverboot_shouldRestoreRootfs, "test_obDeinitializeOverboot_shouldRestoreRootfs", 98);
 
   return UnityEnd();
 }

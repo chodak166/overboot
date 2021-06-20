@@ -4,7 +4,8 @@ project(obinit LANGUAGES C)
 
 set(C_STANDARD 11)
 
-add_executable(obinit main.c)
+add_subdirectory(libobinit)
+add_subdirectory(src)
 
 enable_testing()
 add_subdirectory(tests/unit)
