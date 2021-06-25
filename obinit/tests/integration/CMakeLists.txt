@@ -22,12 +22,3 @@ add_executable(${TEST_TARGET} ${COMMON_SRC}
     )
 target_link_libraries(${TEST_TARGET} obinit)
 add_test(${TEST_TARGET} ${TEST_TARGET})
-
-
-set(TEST_TARGET ObInitTest)
-add_executable(${TEST_TARGET} ${COMMON_SRC}
-    ObInit.test.c
-    ObInit.test_Runner.c
-    )
-add_test(${TEST_TARGET} ${TEST_TARGET})
-target_link_libraries(${TEST_TARGET} obinit)
