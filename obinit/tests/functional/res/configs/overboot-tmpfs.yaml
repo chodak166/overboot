@@ -1,9 +1,9 @@
 enabled: true
 layers:
   visible: true
-  device: "/dev/sdb1"
+  device: "/dev/ob_test.img"
   repository: "overboot"
-  head: "2020-12-01-head-layer"
+  head: "20190330-2-third-test-layer"
 upper:
   type: "tmpfs"
   size: "50%"
@@ -12,7 +12,7 @@ upper:
 #upper:
   #type: "volatile"
 durables:
-    - path: "/var/log"
+    - path: "/test/durables-1"
       copy_origin: false
-    - path: "/etc/netplan"
+    - path: "/test/durables-2"
       copy_origin: true
