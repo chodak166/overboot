@@ -1,4 +1,4 @@
-#!/usr/bin/env bats
+#!/bin/env bats
 
 load helpers
 
@@ -16,8 +16,9 @@ teardown()
   test_cleanup
 }
 
+
 @test "obinit should mount data device as configured" {
-  $OBINIT_BIN "$TEST_RAMFS_DIR"
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR"
   
   [ $(test_isMounted "$TEST_OB_DEVICE_MNT_PATH") -eq 0 ]
 }
@@ -35,7 +36,7 @@ teardown()
 
 @test "obinit should use tmpfs as upper if configured" {
   skip
-  $OBINIT_BIN "$TEST_RAMFS_DIR"
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR"
   mount | grep -q "tmpfs on /tmp/fstest"
   status=$?
   

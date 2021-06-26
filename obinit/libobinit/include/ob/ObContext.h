@@ -8,11 +8,25 @@
 
 #include "ob/ObDefs.h"
 
+#include <stdbool.h>
+#include <inttypes.h>
+
 typedef struct ObContext
 {
   char prefix[OB_PREFIX_MAX];
   char devicePath[OB_PATH_MAX];
   char devMountPoint[OB_PATH_MAX];
+
+  char headLayer[OB_NAME_MAX];
+  char repository[OB_PATH_MAX];
+  char tmpfsSize[16];
+
+  bool enabled;
+  bool bindLayers;
+  bool useTmpfs;
+  bool clearUpper;
+
+  //TODO durables
 } ObContext;
 
 void obSetPrefix(ObContext* context, const char* prefix);
