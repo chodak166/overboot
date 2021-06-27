@@ -17,19 +17,28 @@ int main(int argc, char* argv[])
     exit(options.exitStatus);
   }
 
-  ObContext context;
+  ObContext* context = obCreateObContext(options.rootPrefix);
 
-  //obSetDefaultContext(&context); //TODO
-  obSetPrefix(&context, options.root);
-  obLoadYamlConfig(&context, options.configFile);
+  obLoadYamlConfig(context, options.configFile);
 
-  printf("enabled: %i\n", context.enabled);
-  printf("use tmpfs: %i\n", context.useTmpfs);
-  printf("tmpfs size: %s\n", context.tmpfsSize);
-  printf("bind layers: %i\n", context.bindLayers);
-  printf("Device path: %s\n", context.devicePath);
-  printf("head layer: %s\n", context.headLayer);
-  printf("repo: %s\n", context.repository);
+  printf("enabled: %i\n", context->enabled);
+  printf("use tmpfs: %i\n", context->useTmpfs);
+  printf("tmpfs size: %s\n", context->tmpfsSize);
+  printf("bind layers: %i\n", context->bindLayers);
+  printf("Device path: %s\n", context->devicePath);
+  printf("head layer: %s\n", context->headLayer);
+  printf("repo: %s\n", context->repository);
 
+  int durablesCount = obCountDurables(context);
+
+  printf("durables (%i):\n", durablesCount);
+
+  ObDurable* durable = context->durable;
+  while (durable != NULL) {
+    printf("path: %s, copy_origin: %i\n", durable->path, durable->copyOrigin);
+    durable = durable->next;
+  }
+
+  obFreeObContext(&context);
   return 0;
 }

@@ -20,9 +20,7 @@ static void onScalarValue(ObContext* context, const char* itemPath, const char* 
     context->bindLayers = strcmp(value, "true") == 0 ? true : false;
   }
   else if (strcmp(itemPath, ".layers.device") == 0) {
-    char buf[OB_DEV_PATH_MAX];
-    strcpy(buf, value);
-    obSetDevicePath(context, buf);
+    strcpy(context->devicePath, value);
   }
   else if (strcmp(itemPath, ".layers.repository") == 0) {
     strcpy(context->repository, value);
@@ -37,12 +35,23 @@ static void onScalarValue(ObContext* context, const char* itemPath, const char* 
   else if (strcmp(itemPath, ".upper.size") == 0) {
     strcpy(context->tmpfsSize, value);
   }
+  else if (strcmp(itemPath, ".durables..path") == 0
+           && context->durable != NULL) {
+    strcpy(context->durable->path, value);
+  }
+  else if (strcmp(itemPath, ".durables..copy_origin") == 0
+           && context->durable != NULL) {
+    context->durable->copyOrigin = strcmp(value, "true") == 0 ? true : false;
+  }
 }
 
 
 static void onSequenceEntryStart(ObContext* context, const char* itemPath)
 {
   printf("onSequenceEntryStart: %s\n", itemPath);
+  if (strcmp(itemPath, ".durables") == 0) {
+    obAddDurable(context, "", false);
+  }
 }
 
 void obLoadYamlConfig(ObContext* context, const char* path)

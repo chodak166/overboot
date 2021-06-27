@@ -11,11 +11,17 @@
 #include <stdbool.h>
 #include <inttypes.h>
 
+typedef struct ObDurable
+{
+  char path[OB_PATH_MAX];
+  bool copyOrigin;
+  struct ObDurable* next;
+} ObDurable;
+
 typedef struct ObContext
 {
   char prefix[OB_PREFIX_MAX];
   char devicePath[OB_PATH_MAX];
-  char devMountPoint[OB_PATH_MAX];
 
   char headLayer[OB_NAME_MAX];
   char repository[OB_PATH_MAX];
@@ -26,12 +32,41 @@ typedef struct ObContext
   bool useTmpfs;
   bool clearUpper;
 
-  //TODO durables
+  ObDurable* durable;
+
+  char devMountPoint[OB_DEV_PATH_MAX];
+
 } ObContext;
 
-void obSetPrefix(ObContext* context, const char* prefix);
+/**
+ * @brief Setup default and internal context fields
+ * @param context OB context to setup
+ * @param prefix path to prepend, usually empty
+ */
+void obInitializeObContext(ObContext* context, const char* prefix);
 
-void obSetDevicePath(ObContext* context, const char* path);
+/**
+ * @brief Create and initialize OB context
+ * @param prefix path to prepend, usually empty
+ * @return Initialized OB context
+ */
+ObContext* obCreateObContext(const char* prefix);
 
+/**
+ * @brief Free OB context
+ * @param context OB context
+ */
+void obFreeObContext(ObContext** context);
+
+/**
+ * @brief Setup context's device path to match existing node
+ * @param context OB context
+ * @return true if existing node has been matched
+ */
+bool obFindDevice(ObContext* context);
+
+void obAddDurable(ObContext* context, const char* path, bool copyOrigin);
+
+int obCountDurables(ObContext* context);
 
 #endif // OBCONTEXT_H

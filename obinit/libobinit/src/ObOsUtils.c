@@ -50,3 +50,39 @@ int obMkpath(const char* path, mode_t mode)
   free(origPath);
   return status;
 }
+
+bool obIsFile(const char* path)
+{
+  struct stat fileStat;
+  int exist = stat(path, &fileStat);
+  if (exist == 0 && (fileStat.st_mode & S_IFREG)) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+bool obIsBlockDevice(const char* path)
+{
+  struct stat fileStat;
+  int exist = stat(path, &fileStat);
+  if (exist == 0 && (fileStat.st_mode & S_IFBLK)) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+bool obIsDirectory(const char* path)
+{
+  struct stat fileStat;
+  int exist = stat(path, &fileStat);
+  if (exist == 0 && (fileStat.st_mode & S_IFDIR)) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}

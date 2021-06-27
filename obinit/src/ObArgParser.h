@@ -12,7 +12,7 @@
 
 typedef struct ObCliOptions
 {
-  char root[OB_CLI_PATH_MAX];
+  char rootPrefix[OB_CLI_PATH_MAX];
   char configFile[OB_CLI_PATH_MAX];
   int exitStatus;
   bool exitProgram;

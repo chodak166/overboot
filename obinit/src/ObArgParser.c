@@ -12,7 +12,7 @@
 #include <string.h>
 
 #define APP_NAME "obinit"
-#define OB_DEFAULT_ROOT "/"
+#define OB_DEFAULT_ROOT_PREFIX ""
 #define OB_DEFAULT_CONFIG_FILE "/rootmnt/etc/overboot.yaml"
 
 static void printVersion()
@@ -32,7 +32,7 @@ ObCliOptions obParseArgs(int argc, char* argv[])
   options.exitProgram = false;
   options.exitStatus = EXIT_SUCCESS;
   strcpy(options.configFile, OB_DEFAULT_CONFIG_FILE);
-  strcpy(options.root, OB_DEFAULT_ROOT);
+  strcpy(options.rootPrefix, OB_DEFAULT_ROOT_PREFIX);
 
   char c = -1;
   while (optind < argc) {
@@ -54,7 +54,7 @@ ObCliOptions obParseArgs(int argc, char* argv[])
         strncpy(options.configFile, optarg, OB_CLI_PATH_MAX);
         break;
       case 'r':
-        strncpy(options.root, optarg, OB_CLI_PATH_MAX);
+        strncpy(options.rootPrefix, optarg, OB_CLI_PATH_MAX);
         break;
       default:
         break;

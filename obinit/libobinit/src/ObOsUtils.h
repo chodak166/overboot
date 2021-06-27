@@ -6,8 +6,12 @@
 #ifndef OBOSUTILS_H
 #define OBOSUTILS_H
 
+#include <stdbool.h>
 #include <sys/types.h>
 
 int obMkpath(const char *path, mode_t mode);
+bool obIsFile(const char* path);
+bool obIsBlockDevice(const char* path);
+bool obIsDirectory(const char* path);
 
 #endif // OBOSUTILS_H

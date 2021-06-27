@@ -7,8 +7,8 @@ include_directories(
     )
 
 
-file(COPY test_root DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-file(COPY mount_layers DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY test_root DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+file(COPY mount_layers DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 set(COMMON_SRC
   ObTestHelpers.c

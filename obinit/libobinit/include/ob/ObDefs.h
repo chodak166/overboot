@@ -23,7 +23,7 @@
 #endif
 
 #ifndef OB_DEV_MOUNT_POINT
-#define OB_DEV_MOUNT_POINT "/ob_device"
+#define OB_DEV_MOUNT_POINT "/obmnt"
 #endif
 
 #ifndef OB_DEV_MOUNT_MODE

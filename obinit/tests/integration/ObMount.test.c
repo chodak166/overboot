@@ -28,13 +28,15 @@
 
 ObContext helper_getObContext()
 {
-  char prefix[OB_PREFIX_MAX];
+  char prefix[OB_PATH_MAX];
   obGetSelfPath(prefix, OB_PREFIX_MAX);
   strcat(prefix, TEST_ROOT_PATH);
 
   ObContext context;
-  obSetPrefix(&context, prefix);
-  obSetDevicePath(&context, TEST_DEVICE_IMAGE_PATH);
+  obInitializeObContext(&context, prefix);
+
+  strcpy(context.devicePath, TEST_DEVICE_IMAGE_PATH);
+  obFindDevice(&context);
 
   return context;
 }
@@ -44,6 +46,14 @@ char* helper_readTestFile(const ObContext* context, char* content)
   char testFilePath[OB_PATH_MAX];
   sprintf(testFilePath, "%s%s/%s", context->prefix, OB_DEV_MOUNT_POINT, TEST_MOUNTED_FILE_PATH);
   return obReadFile(testFilePath, content);
+}
+
+void test_obMountDevice_shouldReturnTrueOnSuccessfulMount()
+{
+  ObContext context = helper_getObContext();
+  bool mountResult = obMountDevice(&context);
+  obUnmountDevice(&context);
+  TEST_ASSERT_TRUE(mountResult);
 }
 
 void test_obMountDevice_shouldMakeFilesReadableAfterImageMount()
@@ -79,7 +89,7 @@ void test_obMountDevice_shouldMakeFilesReadableAfterDeviceMount()
 void test_obMountDevice_shouldFailWhenWrongPath()
 {
   ObContext context = helper_getObContext();
-  obSetDevicePath(&context, TEST_WRONG_DEVICE_PATH);
+  strcpy(context.devicePath, TEST_WRONG_DEVICE_PATH);
   bool result = obMountDevice(&context);
   TEST_ASSERT_FALSE(result);
 }
