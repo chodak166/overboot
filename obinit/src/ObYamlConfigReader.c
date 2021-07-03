@@ -12,7 +12,6 @@
 
 static void onScalarValue(ObContext* context, const char* itemPath, const char* value)
 {
-  printf("onScalarValue: %s -> %s\n", itemPath, value);
   if (strcmp(itemPath, ".enabled") == 0) {
     context->enabled = strcmp(value, "true") == 0 ? true : false;
   }
@@ -48,7 +47,6 @@ static void onScalarValue(ObContext* context, const char* itemPath, const char* 
 
 static void onSequenceEntryStart(ObContext* context, const char* itemPath)
 {
-  printf("onSequenceEntryStart: %s\n", itemPath);
   if (strcmp(itemPath, ".durables") == 0) {
     obAddDurable(context, "", false);
   }

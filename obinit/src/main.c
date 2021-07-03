@@ -5,13 +5,29 @@
 
 #include "ObArgParser.h"
 #include "ob/ObContext.h"
+#include "ob/ObLogging.h"
 #include "ObYamlConfigReader.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef OB_LOG_STDOUT
+# define OB_LOG_USE_STD true
+#else
+# define OB_LOG_USE_STD false
+#endif
+
+
+#ifdef OB_LOG_KMSG
+# define OB_LOG_USE_KMSG true
+#else
+# define OB_LOG_USE_KMSG false
+#endif
+
 int main(int argc, char* argv[])
 {
+  obInitLogger(OB_LOG_USE_STD, OB_LOG_USE_KMSG);
+
   ObCliOptions options = obParseArgs(argc, argv);
   if (options.exitProgram) {
     exit(options.exitStatus);
@@ -21,21 +37,21 @@ int main(int argc, char* argv[])
 
   obLoadYamlConfig(context, options.configFile);
 
-  printf("enabled: %i\n", context->enabled);
-  printf("use tmpfs: %i\n", context->useTmpfs);
-  printf("tmpfs size: %s\n", context->tmpfsSize);
-  printf("bind layers: %i\n", context->bindLayers);
-  printf("Device path: %s\n", context->devicePath);
-  printf("head layer: %s\n", context->headLayer);
-  printf("repo: %s\n", context->repository);
+  obLogI("enabled: %i", context->enabled);
+  obLogI("use tmpfs: %i", context->useTmpfs);
+  obLogI("tmpfs size: %s", context->tmpfsSize);
+  obLogI("bind layers: %i", context->bindLayers);
+  obLogI("Device path: %s", context->devicePath);
+  obLogI("head layer: %s", context->headLayer);
+  obLogI("repo: %s", context->repository);
 
   int durablesCount = obCountDurables(context);
 
-  printf("durables (%i):\n", durablesCount);
+  obLogI("durables (%i):", durablesCount);
 
   ObDurable* durable = context->durable;
   while (durable != NULL) {
-    printf("path: %s, copy_origin: %i\n", durable->path, durable->copyOrigin);
+    obLogI("path: %s, copy_origin: %i", durable->path, durable->copyOrigin);
     durable = durable->next;
   }
 

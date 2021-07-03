@@ -9,6 +9,7 @@ add_library(${TARGET} STATIC
   src/ObOsUtils.c
   src/ObMount.c
   src/ObContext.c
+  src/ObLogging.c
   )
 
 target_include_directories(${TARGET}
