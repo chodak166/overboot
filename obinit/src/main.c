@@ -6,6 +6,7 @@
 #include "ObArgParser.h"
 #include "ob/ObContext.h"
 #include "ob/ObLogging.h"
+#include "ob/ObMount.h"
 #include "ObYamlConfigReader.h"
 
 #include <stdio.h>
@@ -55,6 +56,12 @@ int main(int argc, char* argv[])
     durable = durable->next;
   }
 
+  if (obFindDevice(context)) {
+    obMountDevice(context);
+  }
+  else {
+    obLogE("Device %s not found", context->devicePath);
+  }
   obFreeObContext(&context);
   return 0;
 }

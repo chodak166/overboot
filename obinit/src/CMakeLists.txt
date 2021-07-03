@@ -22,7 +22,7 @@ target_link_libraries(${TARGET} obinit yaml.a)
 set_target_properties(${TARGET}
         PROPERTIES OUTPUT_NAME obinit)
 
-if (${OB_LOG_STD})
+if (${OB_LOG_STDOUT})
   target_compile_definitions(${TARGET} PRIVATE -DOB_LOG_STDOUT)
 endif()
 

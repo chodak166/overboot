@@ -4,6 +4,7 @@
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
 #include "ob/ObMount.h"
+#include "ob/ObLogging.h"
 #include "ObOsUtils.h"
 
 #include <stdlib.h>
@@ -23,51 +24,45 @@ bool obMountDevice(const ObContext* context)
 {
   int result = obMkpath(context->devMountPoint, OB_DEV_MOUNT_MODE);
   if (result != 0) {
-    fprintf(stderr, "Cannot create %s: %s\n", context->devMountPoint, strerror(errno));
+    obLogE("Cannot create %s: %s", context->devMountPoint, strerror(errno));
     return false;
   }
-  printf("dir created\n");
 
+  obLogI("Directory %s created", context->devMountPoint);
 
   struct stat devStat;
   result = lstat(context->devicePath, &devStat);
   if (result != 0) {
-    fprintf(stderr, "Cannot stat %s: %s\n", context->devicePath, strerror(errno));
+    obLogE("Cannot stat %s: %s", context->devicePath, strerror(errno));
     return false;
   }
 
   if (S_ISBLK(devStat.st_mode)) {
-    printf("%s is a block device\n", context->devicePath);
-
-
+    obLogI("%s is a block device", context->devicePath);
     result = mount(context->devicePath, context->devMountPoint,
                    OB_DEV_IMAGE_FS, OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS);
-    printf("mount result: %d\n", result);
     if (result != 0) {
-      fprintf(stderr, "Cannot mount %s: %s\n", context->devicePath, strerror(errno));
+      obLogE("Cannot mount %s: %s", context->devicePath, strerror(errno));
       return false;
     }
 
-    printf("mounted as a block device\n");
-
-
   }
   else if (S_ISREG(devStat.st_mode)){
-    printf("%s is a regular file\n", context->devicePath);
+    obLogI("%s is a regular file", context->devicePath);
 
     char loopDevice[OB_DEV_PATH_MAX];
     int loopDeviceFd = obMountLoopDevice(context->devicePath, loopDevice);
 
     if (loopDeviceFd < 0) {
-      perror("loop device mount failed");
+      obLogE("Loop device mount failed");
       return false;
     }
 
     if (mount(loopDevice, context->devMountPoint, OB_DEV_IMAGE_FS,
               OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS) < 0) {
-        perror("mount failed");
+        obLogE("Mount failed");
     } else {
-        printf("mount successful\n");
+        obLogI("Mount successful");
     }
 
     obFreeLoopDevice(loopDeviceFd);

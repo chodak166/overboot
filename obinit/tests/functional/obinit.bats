@@ -6,7 +6,7 @@ setup()
 {
   test_setupFakeRamfsRoot
   
-  if [ ! -f "$OBINIT_BIN" ]; then
+  if [ ! -f "$OBINIT_BIN"  ]; then
     echo "ERROR: obinit binary not found ($OBINIT_BIN), please provide OBINIT_BIN environment variable" 1>&2 && exit 1
   fi
 }
@@ -18,14 +18,13 @@ teardown()
 
 
 @test "obinit should mount data device as configured" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR"
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_ROOTMNT_DIR/etc/overboot.yaml"
   
   [ $(test_isMounted "$TEST_OB_DEVICE_MNT_PATH") -eq 0 ]
 }
 
 @test "obinit should prepare overlay directory" {
-  skip
-  $OBINIT_BIN "$TEST_RAMFS_DIR"
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_ROOTMNT_DIR/etc/overboot.yaml"
   
   [ -d "$TEST_OB_OVERLAY_DIR" ]
   [ -d "$TEST_OB_OVERLAY_DIR/work" ]

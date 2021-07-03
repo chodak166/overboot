@@ -39,18 +39,18 @@ typedef struct ObContext
 } ObContext;
 
 /**
+ * @brief Create *initialized* OB context
+ * @param prefix path to prepend, usually empty
+ * @return Initialized OB context
+ */
+ObContext* obCreateObContext(const char* prefix);
+
+/**
  * @brief Setup default and internal context fields
  * @param context OB context to setup
  * @param prefix path to prepend, usually empty
  */
 void obInitializeObContext(ObContext* context, const char* prefix);
-
-/**
- * @brief Create and initialize OB context
- * @param prefix path to prepend, usually empty
- * @return Initialized OB context
- */
-ObContext* obCreateObContext(const char* prefix);
 
 /**
  * @brief Free OB context
