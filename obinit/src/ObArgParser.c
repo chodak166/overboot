@@ -6,6 +6,8 @@
 #include "ObArgParser.h"
 #include "version.h"
 
+#include "ob/ObLogging.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -31,10 +33,10 @@ ObCliOptions obParseArgs(int argc, char* argv[])
   ObCliOptions options;
   options.exitProgram = false;
   options.exitStatus = EXIT_SUCCESS;
-  strcpy(options.configFile, OB_DEFAULT_CONFIG_FILE);
   strcpy(options.rootPrefix, OB_DEFAULT_ROOT_PREFIX);
 
   char c = -1;
+  bool isConfigSet = false;
   while (optind < argc) {
     if ((c = getopt(argc, argv, "vhr:c:")) != -1) {
       switch (c) {
@@ -52,6 +54,7 @@ ObCliOptions obParseArgs(int argc, char* argv[])
       }
       case 'c':
         strncpy(options.configFile, optarg, OB_CLI_PATH_MAX);
+        isConfigSet = true;
         break;
       case 'r':
         strncpy(options.rootPrefix, optarg, OB_CLI_PATH_MAX);
@@ -61,11 +64,17 @@ ObCliOptions obParseArgs(int argc, char* argv[])
       }
     }
     else {
-      fprintf(stderr, "Unknown argument: %s\n", argv[optind]);
+      obLogE("Unknown argument: %s", argv[optind]);
       printUsage();
       options.exitStatus = EXIT_FAILURE;
       break;
     }
   }
+
+  if (!isConfigSet) {
+    strcpy(options.configFile, options.rootPrefix);
+    strcat(options.configFile, OB_DEFAULT_CONFIG_FILE);
+  }
+
   return options;
 }

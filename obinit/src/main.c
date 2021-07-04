@@ -7,6 +7,7 @@
 #include "ob/ObContext.h"
 #include "ob/ObLogging.h"
 #include "ob/ObMount.h"
+#include "ob/ObOsUtils.h"
 #include "ObYamlConfigReader.h"
 
 #include <stdio.h>
@@ -56,12 +57,39 @@ int main(int argc, char* argv[])
     durable = durable->next;
   }
 
-  if (obFindDevice(context)) {
-    obMountDevice(context);
-  }
-  else {
+  if (!obFindDevice(context)) {
     obLogE("Device %s not found", context->devicePath);
+    return EXIT_FAILURE;
   }
+
+  if (!obMountDevice(context)) {
+    obLogE("Device mount (%s -> %s) failed", context->devicePath, context->devMountPoint);
+    return EXIT_FAILURE;
+  }
+
+\
+  if (!obPrepareOverlay(context)) {
+    obLogE("Cannot prepare overlay dir (%s)", context->overlayDir);
+    return EXIT_FAILURE;
+  }
+
+  if (!context->useTmpfs) {
+    char srcPath[OB_PATH_MAX];
+    sprintf(srcPath, "%s/%s/upper", context->devMountPoint, context->repository);
+
+    if (context->clearUpper) {
+      obRemoveDirR(srcPath);
+      obMkpath(srcPath, OB_MKPATH_MODE);
+    }
+    else if (!obExists(srcPath)) {
+      obMkpath(srcPath, OB_MKPATH_MODE);
+    }
+
+    char dstPath[OB_DEV_PATH_MAX];
+    sprintf(dstPath, "%s/upper", context->overlayDir);
+    obRbind(srcPath, dstPath);
+  }
+
   obFreeObContext(&context);
   return 0;
 }

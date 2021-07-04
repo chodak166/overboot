@@ -4,6 +4,7 @@
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
 #include "ObYamlParser.h"
+#include "ob/ObLogging.h"
 
 #include <yaml.h>
 
@@ -32,11 +33,11 @@ bool obParseYamlFile(void* context, const char* path, ObYamlValueCallback valueC
 
   /* Initialize parser */
   if(!yaml_parser_initialize(&parser)) {
-    fputs("Failed to initialize parser!\n", stderr); //TODO: log
+    obLogE("Failed to initialize YAML parser");
     return false;
   }
   if(configFile == NULL) {
-    fputs("Failed to open file!\n", stderr); //TODO: log
+    obLogE("Failed to open file: %s", path);
     return false;
   }
 

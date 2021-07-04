@@ -6,12 +6,16 @@
 #ifndef OBOSUTILS_H
 #define OBOSUTILS_H
 
+//TODO: move to src
+
 #include <stdbool.h>
 #include <sys/types.h>
 
 int obMkpath(const char *path, mode_t mode);
+bool obExists(const char* path);
 bool obIsFile(const char* path);
 bool obIsBlockDevice(const char* path);
 bool obIsDirectory(const char* path);
+bool obRemoveDirR(const char* path);
 
 #endif // OBOSUTILS_H

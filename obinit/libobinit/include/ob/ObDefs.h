@@ -26,8 +26,16 @@
 #define OB_DEV_MOUNT_POINT "/obmnt"
 #endif
 
+#ifndef OB_OVERLAY_DIR
+#define OB_OVERLAY_DIR "/overlay"
+#endif
+
 #ifndef OB_DEV_MOUNT_MODE
 #define OB_DEV_MOUNT_MODE 0700
+#endif
+
+#ifndef OB_MKPATH_MODE
+#define OB_MKPATH_MODE 0700
 #endif
 
 #ifndef OB_DEV_IMAGE_FS

@@ -19,7 +19,7 @@ bool obRbind(const char* srcPath, const char* dstPath);
 
 bool obMove(const char* srcPath, const char* dstPath);
 
-bool obMountTmpfs(const char* path);
+bool obMountTmpfs(const char* path, const char* sizeStr);
 
 int obMountLoopDevice(const char* imagePath, char* loopDevice);
 
@@ -28,5 +28,6 @@ void obFreeLoopDevice(int deviceFd);
 bool obMountOverlay(char** layers, int layerCount, const char* upper,
                     const char* work, const char* mountPoint);
 
+bool obPrepareOverlay(const ObContext* context);
 
 #endif // OBMOUNT_H

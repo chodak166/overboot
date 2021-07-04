@@ -3,12 +3,19 @@
 // See accompanying file LICENSE.txt or copy at
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
-#include "ObOsUtils.h"
+#include "ob/ObOsUtils.h"
+#include "ob/ObLogging.h"
 
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <errno.h>
 #include <string.h>
+
+#define __USE_XOPEN_EXTENDED
+#include <ftw.h>
+
+#define UNUSED(x) (void)(x)
 
 static int obMkdir(const char *path, mode_t mode)
 {
@@ -26,6 +33,19 @@ static int obMkdir(const char *path, mode_t mode)
     }
 
     return status;
+}
+
+static int obRmPath(const char* path, const struct stat* sbuf, int type, struct FTW* ftwb)
+{
+  UNUSED(sbuf);
+  UNUSED(type);
+  UNUSED(ftwb);
+
+  if (unlink(path) < 0) {
+    obLogE("Cannot remove %s: %s", path, strerror(errno));
+    return -1;
+  }
+  return 0;
 }
 
 int obMkpath(const char* path, mode_t mode)
@@ -49,6 +69,11 @@ int obMkpath(const char* path, mode_t mode)
 
   free(origPath);
   return status;
+}
+
+bool obExists(const char* path)
+{
+  return access(path, F_OK) != -1;
 }
 
 bool obIsFile(const char* path)
@@ -85,4 +110,10 @@ bool obIsDirectory(const char* path)
   else {
     return 0;
   }
+}
+
+
+bool obRemoveDirR(const char* path)
+{
+  return nftw(path, obRmPath, 10, FTW_DEPTH | FTW_MOUNT | FTW_PHYS) >= 0;
 }

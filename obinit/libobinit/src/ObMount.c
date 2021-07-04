@@ -5,7 +5,7 @@
 
 #include "ob/ObMount.h"
 #include "ob/ObLogging.h"
-#include "ObOsUtils.h"
+#include "ob/ObOsUtils.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,6 +20,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+//TODO: add info logs
+
+//TODO: split it
 bool obMountDevice(const ObContext* context)
 {
   int result = obMkpath(context->devMountPoint, OB_DEV_MOUNT_MODE);
@@ -42,7 +45,8 @@ bool obMountDevice(const ObContext* context)
     result = mount(context->devicePath, context->devMountPoint,
                    OB_DEV_IMAGE_FS, OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS);
     if (result != 0) {
-      obLogE("Cannot mount %s: %s", context->devicePath, strerror(errno));
+      obLogE("Cannot mount %s in %s: %s",
+             context->devicePath, context->devMountPoint, strerror(errno));
       return false;
     }
 
@@ -60,9 +64,8 @@ bool obMountDevice(const ObContext* context)
 
     if (mount(loopDevice, context->devMountPoint, OB_DEV_IMAGE_FS,
               OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS) < 0) {
-        obLogE("Mount failed");
-    } else {
-        obLogI("Mount successful");
+        obLogE("Mounting %s in %s failed with error: %s",
+               loopDevice, context->devMountPoint, strerror(errno));
     }
 
     obFreeLoopDevice(loopDeviceFd);
@@ -75,7 +78,7 @@ bool obUnmount(const char* path)
 {
   int result = umount2(path, MNT_DETACH);
   if (result != 0) {
-    fprintf(stderr, "Cannot unmount %s: %s\n", path, strerror(errno));
+    obLogE("Cannot unmount %s: %s", path, strerror(errno));
     return false;
   }
   return true;
@@ -92,9 +95,10 @@ bool obRbind(const char* srcPath, const char* dstPath)
     return false;
   }
 
+  obLogI("Binding %s to %s", srcPath, dstPath);
   int result = mount(srcPath, dstPath, NULL, MS_BIND | MS_REC, "");
   if (result != 0) {
-    fprintf(stderr, "Cannot bind %s: %s\n", srcPath, strerror(errno));
+    obLogE("Cannot bind %s: %s", srcPath, strerror(errno));
     return false;
   }
 
@@ -109,22 +113,24 @@ bool obMove(const char* srcPath, const char* dstPath)
 
   int result = mount(srcPath, dstPath, NULL, MS_MOVE, "");
   if (result != 0) {
-    fprintf(stderr, "Cannot move %s: %s\n", srcPath, strerror(errno));
+    obLogE("Cannot move %s: %s", srcPath, strerror(errno));
     return false;
   }
 
   return true;
 }
 
-bool obMountTmpfs(const char* path)
+bool obMountTmpfs(const char* path, const char* sizeStr)
 {
   if (obMkpath(path, OB_DEV_MOUNT_MODE) != 0) {
     return false;
   }
 
-  int result = mount("tmpfs", path, "tmpfs", 0, "");
+  char options[16];
+  sprintf(options, "size=%s", sizeStr);
+  int result = mount("tmpfs", path, "tmpfs", 0, options);
   if (result != 0) {
-    fprintf(stderr, "Cannot mount tmpfs in %s: %s\n", path, strerror(errno));
+    obLogE("Cannot mount tmpfs (options: %s) in %s: %s", options, path, strerror(errno));
     return false;
   }
   return true;
@@ -134,7 +140,7 @@ int obMountLoopDevice(const char* imagePath, char* loopDevice)
 {
   int controlFd = open("/dev/loop-control", O_RDWR);
   if (controlFd < 0) {
-      perror("open loop control device failed");
+      obLogE("Opening loop control device failed");
       return 0;
   }
 
@@ -142,23 +148,23 @@ int obMountLoopDevice(const char* imagePath, char* loopDevice)
   sprintf(loopDevice, "/dev/loop%d", loopId);
   close(controlFd);
 
-  printf("using loop device: %s\n", loopDevice);
+  obLogI("Using loop device: %s", loopDevice);
 
   int imageFd = open(imagePath, O_RDWR);
   if (imageFd < 0) {
-      perror("open backing file failed");
+      obLogE("Opening image file failed");
       return 0;
   }
 
   int deviceFd = open(loopDevice, O_RDWR);
   if (deviceFd < 0) {
-      perror("open loop device failed");
+      obLogE("Opening loop device failed");
       close(imageFd);
       return 0;
   }
 
   if (ioctl(deviceFd, LOOP_SET_FD, imageFd) < 0) {
-      perror("ioctl LOOP_SET_FD failed");
+      obLogE("ioctl LOOP_SET_FD failed");
       close(imageFd);
       close(deviceFd);
       return 0;
@@ -181,7 +187,7 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
   lowerLayers[0] = '\0';
 
   for (int i = layerCount -1; i >=0; --i) {
-    printf("layer: %s\n", layers[i]);
+    obLogI("Layer: %s", layers[i]);
     strcat(lowerLayers, layers[i]);
     if (i != 0) {
       strcat(lowerLayers, ":");
@@ -190,8 +196,6 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
 
   char options[OB_DEV_PATH_MAX * (layerCount+2)];
   sprintf(options, "lowerdir=%s,upperdir=%s,workdir=%s", lowerLayers, upper, work);
-
-  printf("options: %s\n", options);
 
   if (obMkpath(mountPoint, OB_DEV_MOUNT_MODE) != 0) {
     return false;
@@ -203,11 +207,30 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
 
   int result = mount("overlay", mountPoint, "overlay", 0, options);
   if (result != 0) {
-    fprintf(stderr, "Cannot mount %s: %s\n", mountPoint, strerror(errno));
+    obLogE("Cannot mount %s: %s", mountPoint, strerror(errno));
   }
   else {
-    printf("OVERLAY MOUNTED\n");
+    obLogI("OVERLAY MOUNTED");
   }
 
   return result == 0;
+}
+
+//TODO check mkpath status
+bool obPrepareOverlay(const ObContext* context)
+{
+  obMkpath(context->overlayDir, OB_MKPATH_MODE);
+  obMountTmpfs(context->overlayDir, context->tmpfsSize);
+
+  char path[OB_DEV_PATH_MAX];
+  sprintf(path, "%s/work", context->overlayDir);
+  obMkpath(path, OB_MKPATH_MODE);
+
+  sprintf(path, "%s/lower", context->overlayDir);
+  obMkpath(path, OB_MKPATH_MODE);
+
+  sprintf(path, "%s/upper", context->overlayDir);
+  obMkpath(path, OB_MKPATH_MODE);
+
+  return true;
 }

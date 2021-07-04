@@ -5,7 +5,7 @@
 
 #include "ob/ObContext.h"
 
-#include "ObOsUtils.h"
+#include "ob/ObOsUtils.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -41,6 +41,7 @@ void obInitializeObContext(ObContext* context, const char* prefix)
   context->durable = NULL;
 
   sprintf(context->devMountPoint, "%s%s", prefix, OB_DEV_MOUNT_POINT);
+  sprintf(context->overlayDir, "%s%s", prefix, OB_OVERLAY_DIR);
 }
 
 ObContext* obCreateObContext(const char* prefix)

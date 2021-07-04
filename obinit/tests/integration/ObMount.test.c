@@ -13,6 +13,7 @@
 #define TEST_WRONG_DEVICE_PATH    "/dev/none"
 #define TEST_BIND_PATH            "/bind"
 #define TEST_TMPFS_PATH           "/tmpfs"
+#define TEST_TMPFS_SIZE           "50%"
 #define TEST_TMP_FILE_VALUE       "tmp_test_value"
 
 #define TEST_LAYER_BOTTOM         "/mount_layers/bottom"
@@ -143,7 +144,7 @@ void test_obMountTmpfs_shouldCreateDirAndMakeItWritable()
   obGetSelfPath(tmpfsPath, OB_PATH_MAX);
   strcat(tmpfsPath, TEST_TMPFS_PATH);
 
-  obMountTmpfs(tmpfsPath);
+  obMountTmpfs(tmpfsPath, TEST_TMPFS_SIZE);
 
   char testFile[OB_PATH_MAX];
   obConcatPaths(testFile, tmpfsPath, "/tmp_file");

@@ -35,6 +35,7 @@ typedef struct ObContext
   ObDurable* durable;
 
   char devMountPoint[OB_DEV_PATH_MAX];
+  char overlayDir[OB_DEV_PATH_MAX];
 
 } ObContext;
 
