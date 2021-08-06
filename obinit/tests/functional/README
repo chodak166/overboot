@@ -1,0 +1,7 @@
+This test suite runs bats to execute obinit binary and make the assertions.
+
+NOTICE 1: Since obinit uses mount the tests have to be run as root. Consiter using virtual machine.
+NOTICE 2: Systemd marks all the mount points as shared at boot time, hence moving rootmnt will not work. Use proper VM or call 'mount --mark-private /' if you know what you are doing.
+
+TIP: IDE can run these tests via simple script containing 'sudo -E -S bats . < ./secret.tmp' and the 'secret.tmp' file.
+

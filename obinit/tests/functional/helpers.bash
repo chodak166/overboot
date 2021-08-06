@@ -28,7 +28,7 @@ TEST_MAX_NESTED_MOUNTS=4
 test_setupFakeRamfsRoot()
 {
   test_createOverbootDeviceImage
-  test_mountRootfs
+  test_mountRootmnt
 
   mkdir -p "$TEST_ROOTMNT_DIR/dev"
   mkdir -p "$TEST_ROOTMNT_DIR/etc"
@@ -41,7 +41,7 @@ test_setupFakeRamfsRoot()
 }
 
 
-test_mountRootfs()
+test_mountRootmnt()
 {
   mkdir -p "$TEST_ROOTMNT_DIR"
   mount -t tmpfs tmpfs "$TEST_ROOTMNT_DIR"

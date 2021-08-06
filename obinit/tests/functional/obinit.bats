@@ -76,11 +76,17 @@ teardown()
 }
 
 @test "obinit should move rootmnt to the lower layer directory" {
-  skip
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR"
+
+  [ -f "$TEST_OB_OVERLAY_DIR/lower/etc/overboot.yaml" ]
 }
 
 @test "obinit should mount overlayfs in rootmnt" {
-  skip
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR"
+  testFileName=test-$RANDOM.file
+  touch "$TEST_ROOTMNT_DIR/$testFileName"
+
+  [ -f "$TEST_OB_OVERLAY_DIR/upper/$testFileName" ]
 }
 
 @test "obinit should mount all layers required by the head layer" {
@@ -88,11 +94,17 @@ teardown()
 }
 
 @test "obinit should bind overlay directory in rootmnt" {
-  skip
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR"
+
+  [ -d "$TEST_ROOTMNT_DIR/overlay/lower" ]
+  [ -d "$TEST_ROOTMNT_DIR/overlay/upper" ]
+  [ -d "$TEST_ROOTMNT_DIR/overlay/work" ]
 }
 
-@test "obinit should bind layer repository if configured" {
-  skip
+@test "obinit should bind layer repository if the configuration says so" {
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR"
+  [ -d "$TEST_ROOTMNT_DIR/overlay/layers" ]
+  [ -f "$TEST_ROOTMNT_DIR/overlay/layers/20190202-1-first-test-layer.obld/layer.yaml" ]
 }
 
 @test "obinit should bind durables" {

@@ -113,7 +113,7 @@ bool obMove(const char* srcPath, const char* dstPath)
 
   int result = mount(srcPath, dstPath, NULL, MS_MOVE, "");
   if (result != 0) {
-    obLogE("Cannot move %s: %s", srcPath, strerror(errno));
+    obLogE("Cannot move %s to %s: %s", srcPath, dstPath, strerror(errno));
     return false;
   }
 
@@ -183,6 +183,8 @@ void obFreeLoopDevice(int deviceFd)
 bool obMountOverlay(char** layers, int layerCount, const char* upper,
                     const char* work, const char* mountPoint)
 {
+  obLogI("Mounting overlayfs in %s", mountPoint);
+
   char lowerLayers[OB_PATH_MAX * layerCount];
   lowerLayers[0] = '\0';
 
@@ -198,13 +200,16 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
   sprintf(options, "lowerdir=%s,upperdir=%s,workdir=%s", lowerLayers, upper, work);
 
   if (obMkpath(mountPoint, OB_DEV_MOUNT_MODE) != 0) {
+    obLogE("Cannot create overlay mount point path (%s)", mountPoint);
     return false;
   }
 
   if (obMkpath(work, OB_DEV_MOUNT_MODE) != 0) {
+    obLogE("Cannot create overlay work path (%s)", work);
     return false;
   }
 
+  obLogI("Overlay options: %s", options);
   int result = mount("overlay", mountPoint, "overlay", 0, options);
   if (result != 0) {
     obLogE("Cannot mount %s: %s", mountPoint, strerror(errno));

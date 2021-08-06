@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef OB_LOG_STDOUT
 # define OB_LOG_USE_STD true
@@ -73,6 +74,9 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
 
+  char upperPath[OB_DEV_PATH_MAX];
+  sprintf(upperPath, "%s/upper", context->overlayDir);
+
   if (!context->useTmpfs) {
     char srcPath[OB_PATH_MAX];
     sprintf(srcPath, "%s/%s/upper", context->devMountPoint, context->repository);
@@ -85,9 +89,40 @@ int main(int argc, char* argv[])
       obMkpath(srcPath, OB_MKPATH_MODE);
     }
 
-    char dstPath[OB_DEV_PATH_MAX];
-    sprintf(dstPath, "%s/upper", context->overlayDir);
-    obRbind(srcPath, dstPath);
+    obRbind(srcPath, upperPath);
+  }
+
+  char rootmntPath[OB_PATH_MAX];
+  char lowerPath[OB_PATH_MAX];
+
+  sprintf(rootmntPath, "%s/rootmnt", context->prefix);
+  sprintf(lowerPath, "%s/lower", context->overlayDir);
+  obMove(rootmntPath, lowerPath);
+
+  char workPath[OB_DEV_PATH_MAX];
+  sprintf(workPath, "%s/work", context->overlayDir);
+
+  char repoPath[OB_PATH_MAX];
+  sprintf(repoPath, "%s/%s", context->devMountPoint, context->repository);
+
+  //TODO colect layers
+  char** layers = malloc(1 * sizeof(char*));
+  layers[0] = malloc(OB_PATH_MAX);
+  strcpy(layers[0], lowerPath);
+  if (!obMountOverlay(layers, 1, upperPath, workPath, rootmntPath)) {
+    obLogE("Cannot mount overlay");
+  }
+  //TODO remove layers[][]
+
+  char bindedOverlay[OB_PATH_MAX];
+  sprintf(bindedOverlay, "%s/overlay", rootmntPath);
+  obRbind(context->overlayDir, bindedOverlay);
+
+  if (context->bindLayers) {
+    char bindedRepo[OB_PATH_MAX];
+    sprintf(bindedRepo, "%s/layers", bindedOverlay);
+    obMkpath(bindedRepo, OB_MKPATH_MODE);
+    obRbind(repoPath, bindedRepo);
   }
 
   obFreeObContext(&context);
