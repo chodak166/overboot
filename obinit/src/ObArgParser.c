@@ -15,7 +15,7 @@
 
 #define APP_NAME "obinit"
 #define OB_DEFAULT_ROOT_PREFIX ""
-#define OB_DEFAULT_CONFIG_FILE "/rootmnt/etc/overboot.yaml"
+#define OB_DEFAULT_CONFIG_FILE "/root/etc/overboot.yaml"
 
 static void printVersion()
 {

@@ -1,13 +1,18 @@
 #!/bin/bash
 
 #set -x
-#set -e
+set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$SCRIPT_DIR/../.."
+TEST_RES_DIR="$PROJECT_ROOT/tests/functional/res"
 
-TEST_TMP_DIR="$SCRIPT_DIR/tmp_$(date +%s)"
+if [[ -z "$TEST_TMP_DIR" ]]; then
+  TEST_TMP_DIR="$SCRIPT_DIR/tmp_$(date +%s)"
+fi
+
 TEST_RAMFS_DIR="$TEST_TMP_DIR/ramfs"
-TEST_ROOTMNT_DIR="$TEST_RAMFS_DIR/rootmnt"
+TEST_ROOTMNT_DIR="$TEST_RAMFS_DIR/root"
 TEST_OB_DEVICE_PATH="$TEST_RAMFS_DIR/dev/ob_test.img"
 TEST_OB_DEVICE_MNT_PATH="$TEST_RAMFS_DIR/obmnt"
 TEST_MNT_DIR="$TEST_TMP_DIR/mnt"
@@ -22,7 +27,6 @@ TEST_DURABLE_VALUE="durable value"
 
 TEST_OB_OVERLAY_DIR="$TEST_RAMFS_DIR/overlay"
 
-TEST_RES_DIR="$SCRIPT_DIR/res"
 TEST_MAX_NESTED_MOUNTS=4
 
 test_setupFakeRamfsRoot()
@@ -32,14 +36,17 @@ test_setupFakeRamfsRoot()
 
   mkdir -p "$TEST_ROOTMNT_DIR/dev"
   mkdir -p "$TEST_ROOTMNT_DIR/etc"
+  mkdir -p "$TEST_RAMFS_DIR/etc"
   mkdir -p "$TEST_DURABLES_DIR_1"
   mkdir -p "$TEST_DURABLES_DIR_1"
 
   echo "$TEST_DURABLE_VALUE" > "$TEST_DURABLES_DIR_1/orig.txt"
   echo "$TEST_DURABLE_VALUE" > "$TEST_DURABLES_DIR_2/orig.txt"
   cp "$TEST_RES_DIR/configs/overboot-tmpfs.yaml" "$TEST_ROOTMNT_DIR/etc/overboot.yaml"
+  cp -v "$TEST_RES_DIR/fstab" "$TEST_ROOTMNT_DIR/etc/fstab"
+  cp "$TEST_RES_DIR/fstab-parsed" "$TEST_TMP_DIR/"
+  cp "$TEST_RES_DIR/mtab" "$TEST_RAMFS_DIR/etc/mtab"
 }
-
 
 test_mountRootmnt()
 {

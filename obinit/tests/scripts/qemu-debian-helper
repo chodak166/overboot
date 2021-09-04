@@ -1,0 +1,302 @@
+#!/bin/bash
+## $SCRIPT_NAME v$SCRIPT_VERSION
+##
+## Create and run debian VM with qemu.
+##
+## This --create option uses debootstrap to setup the initial Debian base and then
+## it creates the sysroot-<suite>-base.img containing the sysroot with an embedded
+## kernel and initrd.
+##
+## The --run option will create two more files:
+##
+## 1. sysroot-<suite>-overlay.qcow2 - an overlay containing all the changes made after running the VM.
+## Simply delete this file between bootups to start with a fresh image.
+## 
+## 2. data.img - ext4 formatted image mounted as /data inside the VM. Put executable scripts into
+## /data/tasks to run them automatically after system starts.
+##
+## Note that both commands operate within sysroot-<suite> directory.
+##
+## Usage: $SCRIPT_FILENAME [options]
+##
+## Options:
+##   -c, --create [suite]                                  Create new debian image (e.g. buster)
+##   --prefix [prefix=sysroot-]                            Set image prefix
+##   -m, --mirror [url=http://deb.debian.org/debian]       Set system mirror for debootstrap
+##   -s, --size [size=1024]                                Size of the system base image (MiB)
+##   -r, --run [image]                                     Run given image
+##   -p, --root-password [password=debian]                 Set guest root password
+##   --no-boot                                             Print the run command instead of executing it (requires --run)
+##   -h, --help                                            Display this message
+##   -v, --version                                         Display script version
+##
+##
+## Example:
+##
+## $SCRIPT_FILENAME --create buster && $SCRIPT_FILENAME --run buster
+##
+##
+
+#===========================================
+
+
+SCRIPT_NAME=qemu-debian-helper
+SCRIPT_FILENAME=$(basename "$0")
+SCRIPT_VERSION=0.1.0
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+set -e          # exit on command errors (so you MUST handle exit codes properly!)
+set -o pipefail # capture fail exit codes in piped commands
+#set -x          # execution tracing debug messages
+
+suite=
+image=
+imgSize=1024
+imagePrefix=sysroot-
+bootstrapDir=
+imgDirname=
+mirror=http://deb.debian.org/debian
+rootPassword=debian
+noBoot=false
+
+#===========================================
+
+
+function usage {
+  [ "$*" ] && echo "$0: $*"
+  sed -n '/^##/,/^$/s/^## \{0,1\}//p' "$SCRIPT_DIR/$SCRIPT_FILENAME" |
+    sed "s/\$SCRIPT_NAME/$SCRIPT_NAME/g" |
+    sed "s/\$SCRIPT_FILENAME/$SCRIPT_FILENAME/g" |
+    sed "s/\$SCRIPT_VERSION/$SCRIPT_VERSION/g"
+  
+  exit 2
+} 2>/dev/null
+
+
+function main {
+
+  if [ $# -eq 0 ]; then
+    usage;
+  fi
+  
+  while [ $# -gt 0 ]; do
+    case $1 in
+      ('-h'|'--help')
+	usage 2>&1;;
+      ('-v'|'--version')
+        echo "$SCRIPT_NAME v$SCRIPT_VERSION"
+        exit 0;;
+      ('-c'|'--create')
+	shift
+	suite="$1";;
+      ('-m'|'--mirror')
+	shift
+	mirror="$1";;
+      ('-s'|'--size')
+	shift
+	imgSize="$1";;
+      ('-r'|'--run')
+	shift
+	image="$1";;
+      ('--prefix')
+	shift
+	imagePrefix="$1";;
+      ('--no-boot')
+	noBoot=true;;
+      ('--')
+	shift
+	break;;
+      ('-'*)
+	echo -e "\n$0 $1: unknown option. Use --help to learn more.\n"
+	exit 3
+	break;;
+      (*)
+	usage #run with start parameter only
+	break;;
+    esac
+    
+    shift
+  done
+
+  run
+}
+
+#===========================================
+
+
+function run 
+{
+  exitIfNotRoot
+  
+  bootstrapDir=${imagePrefix}${suite}_bootstrap
+  
+  if [ ! -z "$suite" ]; then
+    imgDirname=${imagePrefix}${suite}
+    createImage
+  fi
+  
+  if [ ! -z "$image" ]; then
+    imgDirname=${imagePrefix}${image}
+    runImage
+  fi
+  echo "Done."
+}
+
+function createImage 
+{
+  exitIfImageExists
+  mkdir "${imgDirname}"
+  
+  runDebootstrap
+  setupRootPassword
+
+  imgFile="${imgDirname}/${imgDirname}-base.img"
+  createImageFile "${imgFile}"
+}
+
+function exitIfImageExists
+{
+  if test -d ${imgDirname}; then
+    echo "Image ${imgDirname} already exists"
+    exit 1
+  fi 
+}
+
+function exitIfNotRoot
+{
+  if [ "$EUID" -ne 0 ]
+  then echo "${SCRIPT_NAME} should be executed by the root user"
+       exit
+  fi
+}
+
+function runDebootstrap
+{
+  echo "Creating imgage with debootstrap in ${bootstrapDir}"
+  mkdir "${bootstrapDir}" ||:
+  debootstrap --verbose --components=main \
+	      --include=linux-image-amd64,grub-pc,util-linux,locales \
+	      --arch amd64 $suite "${bootstrapDir}" "$mirror"
+}
+
+function setupRootPassword
+{
+  echo "Setting root password"
+  chroot "${bootstrapDir}" /bin/bash -c "su - -c 'echo root:${rootPassword} | chpasswd'"
+}
+
+function createImageFile
+{
+  imgFile="$1"
+  mntDir="$PWD/${imgFile}.mnt"
+  
+  echo "Creating image file"
+  
+  dd if=/dev/zero of="${imgFile}" bs=1 count=0 seek=${imgSize}M
+  
+  parted --script "$imgFile" mktable msdos
+  parted -a optimal --script "$imgFile" mkpart primary ext4 1MiB $(($imgSize - 1))MiB
+  
+  loDevice=$(losetup --partscan --show -f "$imgFile")
+  partprobe $loDevice
+  
+  patitionDevice=${loDevice}p1
+  
+  mkfs.ext4 -F $patitionDevice
+  mkdir -p "$mntDir" ||:
+  mount $patitionDevice "${mntDir}"
+
+  echo "Moving sysroot contents to ${imgFile} file..."
+  mv "${bootstrapDir}"/* "${mntDir}"/
+  sync
+
+  sed -i '/GRUB_TIMEOUT/c\GRUB_TIMEOUT=1' "${mntDir}/etc/default/grub"
+  sed -i '/GRUB_CMDLINE_LINUX_DEFAULT/c\GRUB_CMDLINE_LINUX_DEFAULT="rw"' "${mntDir}/etc/default/grub"
+  
+  grub-install --boot-directory="${mntDir}/boot" --modules 'part_msdos' $loDevice
+  chrootExec "${mntDir}" grub-mkconfig -o /boot/grub/grub.cfg
+  chrootExec "${mntDir}" apt clean
+
+  echo "/dev/sdb /data ext4 rw,user,exec 0 0" >> "${mntDir}/etc/fstab"
+  echo -e "#!/bin/sh\n\n/usr/bin/run-parts /data/tasks" > "${mntDir}/etc/rc.local"
+  chmod +x "${mntDir}/etc/rc.local"
+  
+  umount "${mntDir}"
+  losetup -d $loDevice
+  rmdir "${mntDir}"
+  rmdir "${bootstrapDir}"
+}
+
+function createQemuOverlay
+{
+  echo "Creating overlay file ($2) for the image ($1)"
+
+  imgFile="$1"
+  overlayFilename="$2"
+  imgFilename=$(basename "${imgFile}")
+  pushd "${imgDirname}"
+  qemu-img create -b ${imgFilename} -f qcow2 "${overlayFilename}"
+  popd
+}
+
+function createDataFile
+{
+  dataFile="$1"
+  head -c 50M /dev/zero > "$dataFile"
+  mke2fs -t ext4 "$dataFile"
+}
+
+function chrootExec
+{
+  mntDir="$1"
+  shift
+  cmd="su - -c '${@}'"
+  
+  mount --bind /proc      "${mntDir}/proc"
+  mount --bind /sys       "${mntDir}/sys"
+  mount --bind /dev       "${mntDir}/dev"
+  mount --bind /dev/pts   "${mntDir}/dev/pts"
+  
+  chroot "${mntDir}" /bin/bash -c "HOME=/root LC_ALL=C LANG=C.UTF-8 TERM=xterm-256color $cmd"
+  sync
+
+  umount "${mntDir}/proc"
+  umount "${mntDir}/sys"
+  umount "${mntDir}/dev/pts"
+  umount "${mntDir}/dev"
+}
+
+function runImage
+{
+  echo "Running ${imgDirname} image"
+  
+  imgFile="${SCRIPT_DIR}/${imgDirname}/${imgDirname}-base.img"
+  overlayFile="${SCRIPT_DIR}/${imgDirname}/${imgDirname}-overlay.qcow2"
+  dataFile="${SCRIPT_DIR}/${imgDirname}/data.img"
+
+  if [ ! -f "$overlayFile" ]; then
+    createQemuOverlay "$imgFile" "$overlayFile"
+  fi
+  
+  if [ ! -f "$dataFile" ]; then
+    createDataFile "$dataFile"
+  fi
+
+  cmd="qemu-system-x86_64 \\
+       -m 256 \\
+       -cpu host \\
+       -drive file=${overlayFile},format=qcow2,media=disk \\
+       -drive file=${dataFile},format=raw,media=disk \\
+       -net nic -net user \\
+       -enable-kvm"
+
+  if [ $noBoot == true ]; then
+    echo -e "QEMU command:\n\n${cmd}\n"
+  else
+    eval "$cmd"
+  fi
+}
+
+#===========================================
+
+main "$@"
