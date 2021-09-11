@@ -1,0 +1,18 @@
+enabled: true
+layers:
+  visible: true
+  device: "/dev/sdb"
+  repository: "overboot"
+  head: "20190330-2-third-test-layer"
+upper:
+  type: "tmpfs"
+  size: "4096k"
+#upper:
+  #type: "persistent"
+#upper:
+  #type: "volatile"
+durables:
+    - path: "/test/durables-1"
+      copy_origin: false
+    - path: "/test/durables-2"
+      copy_origin: true

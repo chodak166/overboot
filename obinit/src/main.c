@@ -222,6 +222,7 @@ int main(int argc, char* argv[])
     sprintf(srcPath, "%s/%s/upper", context->devMountPoint, context->repository);
 
     if (context->clearUpper) {
+      obLogI("Clearing upper directory (%s)", srcPath);
       obRemoveDirR(srcPath);
       obMkpath(srcPath, OB_MKPATH_MODE);
     }
@@ -243,7 +244,8 @@ int main(int argc, char* argv[])
     sprintf(rootmntPath, "%s/root", context->prefix);
     obLogI("The rootmnt environment variable not set, using %s", rootmntPath);
   }
-  sprintf(lowerPath, "%s/lower", context->overlayDir);
+  sprintf(lowerPath, "%s/lower-root", context->overlayDir);
+  obLogI("Moving %s to %s", rootmntPath, lowerPath);
   obMove(rootmntPath, lowerPath);
 
   char workPath[OB_DEV_PATH_MAX];
@@ -269,10 +271,13 @@ int main(int argc, char* argv[])
   obRbind(context->overlayDir, bindedOverlay);
 
   if (context->bindLayers) {
-    char bindedRepo[OB_PATH_MAX];
-    sprintf(bindedRepo, "%s/layers", bindedOverlay);
-    obMkpath(bindedRepo, OB_MKPATH_MODE);
-    obRbind(repoPath, bindedRepo);
+    char layersDir[OB_PATH_MAX];
+    char bindedLayersDir[OB_PATH_MAX];
+    sprintf(layersDir, "%s/layers", repoPath);
+    sprintf(bindedLayersDir, "%s/layers", bindedOverlay);
+    obMkpath(layersDir, OB_MKPATH_MODE);
+    obMkpath(bindedLayersDir, OB_MKPATH_MODE);
+    obRbind(layersDir, bindedLayersDir);
   }
 
   char mtabPath[OB_PATH_MAX];

@@ -1,28 +1,52 @@
 #!/bin/bash
 
+# /                              # initramfs root
+# ├── obmnt                      # persistent device mount point 
+# │   └── overboot               # repository directory
+# │       ├── durables           # durables storage directory
+# │       ├── upper              # overlayfs upper layer data (if configured)
+# │       └── layers             # layers directory
+# ├── overlay                    # overlayfs parent directory
+# │   ├── lower-root             # the lowest layer, moved /root
+# │   ├── upper                  # upper layer (overlayfs changes, bind from /obdev if configured)
+# │   └── work                   # overlayfs work directory
+# └── root                       # $rootmnt, final root mounted as overlayfs
+#     ├── etc                    # user /etc dir
+#     │   ├── layer.yaml         # head layer metadata (RO)
+#     │   └── overboot.yaml      # overboot config file, (RW durable)
+#     └── overboot               # usrer bindings directory
+#         ├── layers             # /obdev/overboot/layers binding
+#         ├── lower-root         # /overlay/lower-root binding
+#         └── upper              # /overlay/upper binding
+
 #set -x
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$SCRIPT_DIR/../.."
-TEST_RES_DIR="$PROJECT_ROOT/tests/functional/res"
+TESTS_DIR="$PROJECT_ROOT/tests"
+TEST_RES_DIR="$TESTS_DIR/functional/res"
+TEST_CONFIGS_DIR="$TESTS_DIR/configs"
 
 if [[ -z "$TEST_TMP_DIR" ]]; then
   TEST_TMP_DIR="$SCRIPT_DIR/tmp_$(date +%s)"
 fi
 
+TEST_MNT_DIR="$TEST_TMP_DIR/mnt"
+
 TEST_RAMFS_DIR="$TEST_TMP_DIR/ramfs"
 TEST_ROOTMNT_DIR="$TEST_RAMFS_DIR/root"
 TEST_OB_DEVICE_PATH="$TEST_RAMFS_DIR/dev/ob_test.img"
 TEST_OB_DEVICE_MNT_PATH="$TEST_RAMFS_DIR/obmnt"
-TEST_MNT_DIR="$TEST_TMP_DIR/mnt"
-TEST_OB_REPOSITORY_DIR="/overboot"
-
+TEST_OB_REPOSITORY_NAME="overboot"
 TEST_OB_CONFIG_PATH="$TEST_ROOTMNT_DIR/etc/overboot.yaml"
-TEST_DURABLES_DIR_1="$TEST_ROOTMNT_DIR/test/durables-1"
-TEST_DURABLES_DIR_1="$TEST_ROOTMNT_DIR/test/durables-2"
-TEST_NON_EMPTY_DURABLE="$TEST_ROOTMNT_DIR/test/non_empty_durable"
-TEST_DURABLE_FILE="$TEST_NON_EMPTY_DURABLE/file.txt"
+TEST_DURABLES_STORAGE_DIR="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/durables"
+
+TEST_DURABLE_PATH_1="/test/durables-dir-1"
+TEST_DURABLE_PATH_2="/test/durables-dir-2"
+TEST_DURABLE_PATH_3="/test/durable-file-1"
+TEST_NON_EMPTY_DURABLE_PATH="/test/non_empty_durable"
+TEST_NON_EMPTY_DURABLE_FILE="$TEST_NON_EMPTY_DURABLE_PATH/file.txt"
 TEST_DURABLE_VALUE="durable value"
 
 TEST_OB_OVERLAY_DIR="$TEST_RAMFS_DIR/overlay"
@@ -37,12 +61,13 @@ test_setupFakeRamfsRoot()
   mkdir -p "$TEST_ROOTMNT_DIR/dev"
   mkdir -p "$TEST_ROOTMNT_DIR/etc"
   mkdir -p "$TEST_RAMFS_DIR/etc"
-  mkdir -p "$TEST_DURABLES_DIR_1"
-  mkdir -p "$TEST_DURABLES_DIR_1"
+  mkdir -p "$TEST_ROOTMNT_DIR/$TEST_DURABLE_PATH_1"
+  mkdir -p "$TEST_ROOTMNT_DIR/$TEST_DURABLE_PATH_2"
 
-  echo "$TEST_DURABLE_VALUE" > "$TEST_DURABLES_DIR_1/orig.txt"
-  echo "$TEST_DURABLE_VALUE" > "$TEST_DURABLES_DIR_2/orig.txt"
-  cp "$TEST_RES_DIR/configs/overboot-tmpfs.yaml" "$TEST_ROOTMNT_DIR/etc/overboot.yaml"
+  echo -n "$TEST_DURABLE_VALUE" > "$TEST_ROOTMNT_DIR/$TEST_DURABLE_PATH_1/orig.txt"
+  echo -n "$TEST_DURABLE_VALUE" > "$TEST_ROOTMNT_DIR/$TEST_DURABLE_PATH_2/orig.txt"
+
+  cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$TEST_ROOTMNT_DIR/etc/overboot.yaml"
   cp -v "$TEST_RES_DIR/fstab" "$TEST_ROOTMNT_DIR/etc/fstab"
   cp "$TEST_RES_DIR/fstab-parsed" "$TEST_TMP_DIR/"
   cp "$TEST_RES_DIR/mtab" "$TEST_RAMFS_DIR/etc/mtab"
@@ -63,8 +88,8 @@ test_createOverbootDeviceImage()
 
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
-  mkdir -p "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_DIR"
-  cp -r "$TEST_RES_DIR/layers"/* "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_DIR"
+  mkdir -p "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME"
+  cp -r "$TEST_RES_DIR/layers" "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/"
   sync
   umount "$TEST_MNT_DIR"
 }

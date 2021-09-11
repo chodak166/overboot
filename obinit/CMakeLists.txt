@@ -10,7 +10,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 add_subdirectory(libobinit)
 add_subdirectory(src)
 
-enable_testing()
-add_subdirectory(tests/unit)
-add_subdirectory(tests/integration)
-
+option(OB_BUILD_TESTS "Build tests" ON)
+if (${OB_BUILD_TESTS})
+  enable_testing()
+  add_subdirectory(tests/unit)
+  add_subdirectory(tests/integration)
+endif()

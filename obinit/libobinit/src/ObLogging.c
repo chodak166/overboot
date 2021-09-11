@@ -23,11 +23,13 @@ static struct {
 static void obWriteStdLog(const char* log)
 {
   fprintf(stdout, "%s", log);
+  fflush(stdout);
 }
 
 static void obWriteStdLogE(const char* log)
 {
   fprintf(stderr, "%s", log);
+  fflush(stderr);
 }
 
 

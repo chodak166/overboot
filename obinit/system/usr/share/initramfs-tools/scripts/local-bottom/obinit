@@ -1,0 +1,41 @@
+#!/bin/sh
+
+PREREQ="udev"
+
+prereqs()
+{
+    echo "${PREREQ}"
+}
+
+case ${1} in
+    prereqs)
+        prereqs
+        exit 0
+        ;;
+esac
+
+readWithTimeout() {
+        timeout_s=$1
+        old=$(stty -g)
+        stty raw -echo min 0 time $(($timeout_s * 10))
+        printf '%s' $(dd bs=1 count=1 2>/dev/null)
+        stty $old
+}
+
+obBin=${rootmnt}/usr/bin/obinit
+timeout=25
+
+if [ ! -f ${obBin} ]; then
+  echo "${mmsOverlayScript} not found. Boot will continue after ${timeout} seconds. Press enter to continue without timeout."
+  readWithTimeout ${timeout}
+  exit 0
+fi
+
+${obBin} -c ${rootmnt}/etc/overboot.yaml || MMS_STATUS=failed
+
+if [ ${MMS_STATUS} == failed ]; then
+  echo "${mmsOverlayScript} execution failed. Boot will continue after ${timeout} seconds. Press enter to continue without timeout."
+  readWithTimeout ${timeout}
+fi
+
+exit 0
