@@ -176,6 +176,8 @@ int main(int argc, char* argv[])
     exit(options.exitStatus);
   }
 
+  // ---------- Load config ----------
+
   ObContext* context = obCreateObContext(options.rootPrefix);
 
   obLoadYamlConfig(context, options.configFile);
@@ -198,6 +200,8 @@ int main(int argc, char* argv[])
     durable = durable->next;
   }
 
+  // ---------- Mount persistent device ----------
+
   if (!obFindDevice(context)) {
     obLogE("Device %s not found", context->devicePath);
     return EXIT_FAILURE;
@@ -209,6 +213,8 @@ int main(int argc, char* argv[])
   }
 
   \
+  // ---------- Prepare /overlay ----------
+
   if (!obPrepareOverlay(context)) {
     obLogE("Cannot prepare overlay dir (%s)", context->overlayDir);
     return EXIT_FAILURE;
@@ -233,6 +239,9 @@ int main(int argc, char* argv[])
     obRbind(srcPath, upperPath);
   }
 
+
+  // ---------- Move $rootmnt ----------
+
   char rootmntPath[OB_PATH_MAX];
   char lowerPath[OB_PATH_MAX];
 
@@ -247,6 +256,8 @@ int main(int argc, char* argv[])
   sprintf(lowerPath, "%s/lower-root", context->overlayDir);
   obLogI("Moving %s to %s", rootmntPath, lowerPath);
   obMove(rootmntPath, lowerPath);
+
+  // ---------- Mount overlayfs ----------
 
   char workPath[OB_DEV_PATH_MAX];
   sprintf(workPath, "%s/work", context->overlayDir);
@@ -266,6 +277,9 @@ int main(int argc, char* argv[])
   free(layers);
   //TODO remove layers[][]
 
+
+  // ---------- Bind /overlay into $rootmnt ----------
+
   char bindedOverlay[OB_PATH_MAX];
   sprintf(bindedOverlay, "%s/overlay", rootmntPath);
   obRbind(context->overlayDir, bindedOverlay);
@@ -280,10 +294,56 @@ int main(int argc, char* argv[])
     obRbind(layersDir, bindedLayersDir);
   }
 
+
+  // ---------- Update fstab ----------
+
   char mtabPath[OB_PATH_MAX];
   sprintf(mtabPath, "%s/etc/mtab", context->prefix);
 
   updateFstab(rootmntPath, mtabPath);
+
+
+  // ---------- Bind durables ----------
+
+  durable = context->durable;
+  while (durable != NULL) {
+    char persistentPath[OB_PATH_MAX];
+    char bindPath[OB_PATH_MAX];
+
+    sprintf(persistentPath, "%s/%s%s", repoPath, OB_DURABLES_DIR_NAME, durable->path);
+    sprintf(bindPath, "%s%s", rootmntPath, durable->path);
+
+    if (!obExists(bindPath)) {
+      obMkpath(bindPath, OB_MKPATH_MODE);
+      obMkpath(persistentPath, OB_MKPATH_MODE);
+    }
+    else {
+      bool isDir = obIsDirectory(bindPath);
+      if (isDir && !obExists(persistentPath)) {
+        obLogI("Persistent directory not found, creating: %s", persistentPath);
+        obLogI("is dir: %i", obIsDirectory(persistentPath));
+        obMkpath(persistentPath, OB_MKPATH_MODE);
+        obLogI("is dir: %i", obIsDirectory(persistentPath));
+
+        if (durable->copyOrigin) {
+          obLogI("Copying origin from %s", bindPath);
+          obSync(bindPath, persistentPath);
+        }
+      }
+      else if (!isDir && !obExists(persistentPath)) {
+        if (durable->copyOrigin) {
+          //obCopyFile(bindPath, persistentPath);
+        }
+        else {
+          obCreateBlankFile(persistentPath);
+        }
+      }
+    }
+
+    obLogI("Binding durable: %s to %s", persistentPath, bindPath);
+    obRbind(persistentPath, bindPath);
+    durable = durable->next;
+  }
 
   obFreeObContext(&context);
   return 0;

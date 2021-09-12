@@ -14,6 +14,14 @@
 #define OB_PATH_MAX 512
 #endif
 
+#ifndef OB_CPATH_MAX
+#define OB_CPATH_MAX OB_PATH_MAX*2
+#endif
+
+#ifndef OB_CCPATH_MAX
+#define OB_CCPATH_MAX OB_PATH_MAX*3
+#endif
+
 #ifndef OB_DEV_PATH_MAX
 #define OB_DEV_PATH_MAX 512
 #endif
@@ -28,6 +36,10 @@
 
 #ifndef OB_OVERLAY_DIR
 #define OB_OVERLAY_DIR "/overlay"
+#endif
+
+#ifndef OB_DURABLES_DIR_NAME
+#define OB_DURABLES_DIR_NAME "durables"
 #endif
 
 #ifndef OB_DEV_MOUNT_MODE

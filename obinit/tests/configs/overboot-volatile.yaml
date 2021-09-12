@@ -12,7 +12,9 @@ layers:
 upper:
   type: "volatile"
 durables:
-    - path: "/test/durables-1"
+    - path: "/test/durables-dir-1"
       copy_origin: false
-    - path: "/test/durables-2"
+    - path: "/test/durables-dir-2"
+      copy_origin: true
+    - path: "/test/durable-file-1"
       copy_origin: true

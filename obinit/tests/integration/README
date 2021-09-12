@@ -1,0 +1,5 @@
+These tests use unity framework, see: https://github.com/ThrowTheSwitch/Unity
+
+To generate a runner for a new test execute:
+
+../../extern/unity/auto/generate_test_runner.rb ./myunit.test.c

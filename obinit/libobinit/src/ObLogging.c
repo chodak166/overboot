@@ -17,7 +17,7 @@
 static struct {
   bool stdOut;
   bool kmsgOut;
-} obLoggerSettings;
+} obLoggerSettings = {true, false};
 
 
 static void obWriteStdLog(const char* log)

@@ -22,3 +22,11 @@ add_executable(${TEST_TARGET} ${COMMON_SRC}
     )
 target_link_libraries(${TEST_TARGET} obinit)
 add_test(${TEST_TARGET} ${TEST_TARGET})
+
+set(TEST_TARGET ObSyncTest)
+add_executable(${TEST_TARGET} ${COMMON_SRC}
+    ObSync.test.c
+    ObSync.test_Runner.c
+    )
+target_link_libraries(${TEST_TARGET} obinit)
+add_test(${TEST_TARGET} ${TEST_TARGET})

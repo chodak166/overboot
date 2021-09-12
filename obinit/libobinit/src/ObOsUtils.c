@@ -3,16 +3,22 @@
 // See accompanying file LICENSE.txt or copy at
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
+#define _GNU_SOURCE // TODO: move to cmake
+
+
 #include "ob/ObOsUtils.h"
 #include "ob/ObLogging.h"
+#include "ob/ObDefs.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <fcntl.h>
 
-#define __USE_XOPEN_EXTENDED
 #include <ftw.h>
 
 #define UNUSED(x) (void)(x)
@@ -41,12 +47,45 @@ static int obRmPath(const char* path, const struct stat* sbuf, int type, struct 
   UNUSED(type);
   UNUSED(ftwb);
 
-  if (unlink(path) < 0) {
+  if (remove(path) < 0) {
     obLogE("Cannot remove %s: %s", path, strerror(errno));
     return -1;
   }
   return 0;
 }
+
+static const char* syncSrcDir = NULL;
+static const char* syncDstDir = NULL;
+
+static int obSyncCb(const char* path, const struct stat* sbuf, int type, struct FTW* ftwb)
+{
+  UNUSED(sbuf);
+  UNUSED(type);
+  UNUSED(ftwb);
+
+  char toPath[OB_PATH_MAX];
+  strcpy(toPath, syncDstDir);
+  strcat(toPath, "/");
+  strcat(toPath, path + strlen(syncSrcDir));
+
+  if (type == FTW_D) {
+    obMkpath(toPath, OB_MKPATH_MODE);
+  }
+  else if (type == FTW_F) {
+    obCopyFile(path, toPath);
+  }
+  else if (type == FTW_SL) {
+    char linkTarget[OB_PATH_MAX] = {0};
+    readlink(path, linkTarget, OB_PATH_MAX);
+    symlink(linkTarget, toPath);
+  }
+  else {
+    obLogE("Type %i not supported (%s)", type, path);
+  }
+
+  return 0;
+}
+
 
 int obMkpath(const char* path, mode_t mode)
 {
@@ -112,8 +151,67 @@ bool obIsDirectory(const char* path)
   }
 }
 
-
 bool obRemoveDirR(const char* path)
 {
   return nftw(path, obRmPath, 10, FTW_DEPTH | FTW_MOUNT | FTW_PHYS) >= 0;
+}
+
+bool obCreateBlankFile(const char* path)
+{
+  FILE *fp=fopen(path, "w");
+  if (ftruncate(fileno(fp), 0) != 0) {
+    obLogE("Cannot create %s: %s", path, strerror(errno));
+    fclose(fp);
+    return false;
+  }
+  fclose(fp);
+  return true;
+}
+
+bool obCopyFile(const char* src, const char* dst)
+{
+  int fdIn = open(src, O_RDONLY);
+  if (fdIn == -1) {
+    obLogE("Cannot open %s", src);
+    return false;
+  }
+
+  struct stat stat;
+  if (fstat(fdIn, &stat) == -1) {
+    obLogE("Cannot stat %s", src);
+    return false;
+  }
+
+  off_t len = stat.st_size;
+
+  int fdOut = open(dst, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+  if (fdOut == -1) {
+    obLogE("Cannot open %s", src);
+    return false;
+  }
+
+  off_t ret;
+  do {
+    ret = copy_file_range(fdIn, NULL, fdOut, NULL, len, 0);
+    if (ret == -1) {
+      obLogE("Cannot copy %s to %s: %s", src, dst, strerror(errno));
+      return false;
+    }
+
+    len -= ret;
+  } while (len > 0 && ret > 0);
+
+  close(fdIn);
+  close(fdOut);
+  return true;
+}
+
+bool obSync(const char* src, const char* dst)
+{
+  syncSrcDir = src;
+  syncDstDir = dst;
+  bool result = nftw(src, obSyncCb, 10, FTW_MOUNT | FTW_PHYS) >= 0;
+  syncSrcDir = NULL;
+  syncDstDir = NULL;
+  return result;
 }

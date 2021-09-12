@@ -45,8 +45,6 @@ TEST_DURABLES_STORAGE_DIR="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/dur
 TEST_DURABLE_PATH_1="/test/durables-dir-1"
 TEST_DURABLE_PATH_2="/test/durables-dir-2"
 TEST_DURABLE_PATH_3="/test/durable-file-1"
-TEST_NON_EMPTY_DURABLE_PATH="/test/non_empty_durable"
-TEST_NON_EMPTY_DURABLE_FILE="$TEST_NON_EMPTY_DURABLE_PATH/file.txt"
 TEST_DURABLE_VALUE="durable value"
 
 TEST_OB_OVERLAY_DIR="$TEST_RAMFS_DIR/overlay"
@@ -124,9 +122,15 @@ test_success()
   echo 0
 }
 
-
 test_fail()
 {
   echo 1
 }
 
+test_waitForCont()
+{
+  while [ ! -f /tmp/cont ]; do
+    sleep 1s
+  done
+  rm /tmp/cont
+}
