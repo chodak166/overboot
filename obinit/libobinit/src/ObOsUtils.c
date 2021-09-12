@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <string.h>
 #include <fcntl.h>
+#include <libgen.h>
 
 #include <ftw.h>
 
@@ -86,6 +87,18 @@ static int obSyncCb(const char* path, const struct stat* sbuf, int type, struct 
   return 0;
 }
 
+static bool obEnsureParentExists(const char* path)
+{
+  char pathCpy[OB_PATH_MAX];
+  strcpy(pathCpy, path);
+  char* parentDir = dirname(pathCpy);
+
+  if (!obExists(parentDir)) {
+    obLogI("Parent dir does not exists, creating %s", parentDir);
+    return obMkpath(parentDir, OB_MKPATH_MODE) == 0;
+  }
+  return true;
+}
 
 int obMkpath(const char* path, mode_t mode)
 {
@@ -158,8 +171,13 @@ bool obRemoveDirR(const char* path)
 
 bool obCreateBlankFile(const char* path)
 {
-  FILE *fp=fopen(path, "w");
-  if (ftruncate(fileno(fp), 0) != 0) {
+  if (!obEnsureParentExists(path)) {
+    return false;
+  }
+
+  obLogI("Creating blank file: %s", path);
+  FILE* fp = fopen(path, "w");
+  if (fp == NULL || ftruncate(fileno(fp), 0) != 0) {
     obLogE("Cannot create %s: %s", path, strerror(errno));
     fclose(fp);
     return false;
@@ -170,9 +188,13 @@ bool obCreateBlankFile(const char* path)
 
 bool obCopyFile(const char* src, const char* dst)
 {
+  if (!obEnsureParentExists(dst)) {
+    return false;
+  }
+
   int fdIn = open(src, O_RDONLY);
   if (fdIn == -1) {
-    obLogE("Cannot open %s", src);
+    obLogE("Cannot open source file %s: %s", src, strerror(errno));
     return false;
   }
 
@@ -186,7 +208,7 @@ bool obCopyFile(const char* src, const char* dst)
 
   int fdOut = open(dst, O_CREAT | O_WRONLY | O_TRUNC, 0644);
   if (fdOut == -1) {
-    obLogE("Cannot open %s", src);
+    obLogE("Cannot open destination file %s: %s", dst, strerror(errno));
     return false;
   }
 

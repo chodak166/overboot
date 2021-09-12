@@ -7,14 +7,12 @@ layers:
 upper:
   type: "tmpfs"
   size: "4096k"
-#upper:
-  #type: "persistent"
-#upper:
-  #type: "volatile"
 durables:
     - path: "/test/durables-dir-1"
       copy_origin: false
     - path: "/test/durables-dir-2"
       copy_origin: true
-    - path: "/test/durable-file-1"
+    - path: "/test/persistent_file_1"
+      copy_origin: false
+    - path: "/test/persistent_file_2"
       copy_origin: true

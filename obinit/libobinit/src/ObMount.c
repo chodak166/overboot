@@ -91,7 +91,7 @@ bool obUnmountDevice(ObContext* context)
 
 bool obRbind(const char* srcPath, const char* dstPath)
 {
-  if (obMkpath(dstPath, OB_DEV_MOUNT_MODE) != 0) {
+  if (!obExists(dstPath) && obMkpath(dstPath, OB_DEV_MOUNT_MODE) != 0) {
     return false;
   }
 

@@ -331,8 +331,12 @@ int main(int argc, char* argv[])
         }
       }
       else if (!isDir && !obExists(persistentPath)) {
+        obLogI("This durable is not a directory");
         if (durable->copyOrigin) {
-          //obCopyFile(bindPath, persistentPath);
+          obLogI("Copying original file from %s to %s", bindPath, persistentPath);
+          if (!obCopyFile(bindPath, persistentPath)) {
+            obLogE("Copying originl file failed");
+          }
         }
         else {
           obCreateBlankFile(persistentPath);
