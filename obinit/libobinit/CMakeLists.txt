@@ -10,6 +10,9 @@ add_library(${TARGET} STATIC
   src/ObMount.c
   src/ObContext.c
   src/ObLogging.c
+  src/ObYamlParser.c
+  src/ObYamlConfigReader.c
+  src/ObYamlLayerReader.c
   )
 
 target_include_directories(${TARGET}

@@ -57,7 +57,9 @@ bool obParseYamlFile(void* context, const char* path, ObYamlValueCallback valueC
       isKey = false;
       break;
     case YAML_BLOCK_ENTRY_TOKEN:
-      entryCallback(context, itemPath);
+      if (entryCallback) {
+        entryCallback(context, itemPath);
+      }
       pushKey(itemPath, (yaml_char_t*)"");
       break;
     case YAML_BLOCK_END_TOKEN:
@@ -68,7 +70,9 @@ bool obParseYamlFile(void* context, const char* path, ObYamlValueCallback valueC
         pushKey(itemPath, token.data.scalar.value);
       }
       else {
-        valueCallback(context, itemPath, (char*)token.data.scalar.value);
+        if (valueCallback) {
+          valueCallback(context, itemPath, (char*)token.data.scalar.value);
+        }
         popKey(itemPath);
       }
       isKey = false;

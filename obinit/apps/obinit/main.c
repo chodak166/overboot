@@ -8,7 +8,8 @@
 #include "ob/ObLogging.h"
 #include "ob/ObMount.h"
 #include "ob/ObOsUtils.h"
-#include "ObYamlConfigReader.h"
+#include "ob/ObYamlConfigReader.h"
+#include "ob/ObYamlLayerReader.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -167,6 +168,48 @@ int updateFstab(const char* rootmnt, const char* mtabPath)
   return 0;
 }
 
+struct ObLayerItem;
+typedef struct ObLayerItem
+{
+  char layerPath[OB_PATH_MAX];
+  struct ObLayerItem* prev;
+} ObLayerItem;
+
+bool isRootLayer(const char* layerName)
+{
+  return strcmp(OB_UNDERLAYER_ROOT, layerName) == 0
+      || strcmp("", layerName) == 0;
+}
+
+bool isEndLayer(const char* layerName)
+{
+  return strcmp(OB_UNDERLAYER_NONE, layerName) == 0;
+}
+
+ObLayerItem* obCollectLayers(const char* layersDir, const char* layerName,
+                             const char* lowerPath, uint8_t* count)
+{
+  ObLayerItem* item = NULL;
+  ObLayerInfo info;
+  if (obLoadLayerInfo(layersDir, layerName, &info)) {
+    item = calloc(1, sizeof(ObLayerItem));
+    strcpy(item->layerPath, info.rootPath);
+    if (isRootLayer(info.underlayer)) {
+      item->prev = calloc(1, sizeof(ObLayerItem));
+      strcpy(item->prev->layerPath, lowerPath);
+      *count += 1;
+    }
+    else if (isEndLayer(info.underlayer)) {
+      item->prev = NULL;
+    }
+    else {
+      item->prev = obCollectLayers(layersDir, info.underlayer, lowerPath, count);
+    }
+    *count += 1;
+  }
+  return item;
+}
+
 int main(int argc, char* argv[])
 {
   obInitLogger(OB_LOG_USE_STD, OB_LOG_USE_KMSG);
@@ -264,18 +307,51 @@ int main(int argc, char* argv[])
 
   char repoPath[OB_PATH_MAX];
   sprintf(repoPath, "%s/%s", context->devMountPoint, context->repository);
+  char layersPath[OB_PATH_MAX];
+  sprintf(layersPath, "%s/%s", repoPath, OB_LAYERS_DIR_NAME);
 
-  //TODO colect layers
-  char** layers = malloc(1 * sizeof(char*));
-  layers[0] = malloc(OB_PATH_MAX);
-  strcpy(layers[0], lowerPath);
-  if (!obMountOverlay(layers, 1, upperPath, workPath, rootmntPath)) {
+//  char** layers = malloc(1 * sizeof(char*));
+
+  uint8_t count = 0;
+  ObLayerItem* topLayer = obCollectLayers(layersPath, context->headLayer, lowerPath, &count);
+
+  char* layers[count + 1];
+
+  obLogI("Collected layers:");
+  ObLayerItem* layerItem = topLayer;
+  uint8_t i = 0;
+  while (layerItem) {
+    layers[count - i - 1] = layerItem->layerPath;
+    obLogI("root path [%i]: %s", i, layerItem->layerPath);
+    i += 1;
+    layerItem = layerItem->prev;
+  }
+
+//  if (layerItem && layerItem->prev) {
+//    layers[i] = layerItem->prev->layerPath;
+//  }
+//  else {
+//    count -= 1;
+//  }
+
+  for (int j = 0; j < count; ++j) {
+    obLogI("final layer %i: %s", j, layers[j]);
+  }
+
+  //  char** layers = NULL;
+//  uint8_t layerCount = 0;
+//  obCollectLayers(repoPath, context->headLayer,
+//                  lowerPath, layers, &layerCount);
+
+  if (!obMountOverlay(layers, count, upperPath, workPath, rootmntPath)) {
     obLogE("Cannot mount overlay");
   }
 
-  free(layers[0]);
-  free(layers);
-  //TODO remove layers[][]
+//  for (uint8_t i = 0; i < layerCount; ++i) {
+//    free(layers[i]);
+//  }
+//  free(layers);
+
 
 
   // ---------- Bind /overlay into $rootmnt ----------

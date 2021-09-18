@@ -30,6 +30,26 @@
 #define OB_NAME_MAX 255
 #endif
 
+#ifndef OB_TS_MAX
+#define OB_TS_MAX 25
+#endif
+
+#ifndef OB_LAYER_AUTHOR_MAX
+#define OB_LAYER_AUTHOR_MAX 32
+#endif
+
+#ifndef OB_LAYER_DESC_MAX
+#define OB_LAYER_DESC_MAX 255
+#endif
+
+#ifndef OB_LAYER_ROOT_DIR
+#define OB_LAYER_ROOT_DIR "/root"
+#endif
+
+#ifndef OB_LAYER_INFO_PATH
+#define OB_LAYER_INFO_PATH "/etc/layer.yaml"
+#endif
+
 #ifndef OB_DEV_MOUNT_POINT
 #define OB_DEV_MOUNT_POINT "/obmnt"
 #endif
@@ -38,8 +58,24 @@
 #define OB_OVERLAY_DIR "/overlay"
 #endif
 
+#ifndef OB_LAYERS_DIR_NAME
+#define OB_LAYERS_DIR_NAME "layers"
+#endif
+
 #ifndef OB_DURABLES_DIR_NAME
 #define OB_DURABLES_DIR_NAME "durables"
+#endif
+
+#ifndef OB_LAYER_DIR_EXT
+#define OB_LAYER_DIR_EXT "obld"
+#endif
+
+#ifndef OB_UNDERLAYER_ROOT
+#define OB_UNDERLAYER_ROOT "root"
+#endif
+
+#ifndef OB_UNDERLAYER_NONE
+#define OB_UNDERLAYER_NONE "none"
 #endif
 
 #ifndef OB_DEV_MOUNT_MODE

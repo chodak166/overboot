@@ -15,8 +15,6 @@ option(OB_LOG_KMSG "Write logs to /dev/kmsg" ON)
 add_executable(${TARGET}
   main.c
   ObArgParser.c
-  ObYamlParser.c
-  ObYamlConfigReader.c
   )
 target_link_libraries(${TARGET} obinit yaml.a)
 set_target_properties(${TARGET}
