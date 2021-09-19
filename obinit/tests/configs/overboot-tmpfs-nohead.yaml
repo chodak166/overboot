@@ -3,9 +3,14 @@ layers:
   visible: true
   device: "/dev/ob_test.img"
   repository: "overboot"
-  head: "third-test-layer"
+#  head:
 upper:
-  type: "persistent"
+  type: "tmpfs"
+  size: "4096k"
+#upper:
+  #type: "persistent"
+#upper:
+  #type: "volatile"
 durables:
     - path: "/test/durables-dir-1"
       copy_origin: false

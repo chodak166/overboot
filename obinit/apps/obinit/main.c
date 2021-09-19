@@ -190,22 +190,20 @@ ObLayerItem* obCollectLayers(const char* layersDir, const char* layerName,
                              const char* lowerPath, uint8_t* count)
 {
   ObLayerItem* item = NULL;
-  ObLayerInfo info;
-  if (obLoadLayerInfo(layersDir, layerName, &info)) {
+
+  if (isRootLayer(layerName)) {
     item = calloc(1, sizeof(ObLayerItem));
-    strcpy(item->layerPath, info.rootPath);
-    if (isRootLayer(info.underlayer)) {
-      item->prev = calloc(1, sizeof(ObLayerItem));
-      strcpy(item->prev->layerPath, lowerPath);
+    strcpy(item->layerPath, lowerPath);
+    *count += 1;
+  }
+  else if (!isEndLayer(layerName)) {
+    ObLayerInfo info;
+    if (obLoadLayerInfo(layersDir, layerName, &info)) {
+      item = calloc(1, sizeof(ObLayerItem));
+      strcpy(item->layerPath, info.rootPath);
+      item->prev = obCollectLayers(layersDir, info.underlayer, lowerPath, count);
       *count += 1;
     }
-    else if (isEndLayer(info.underlayer)) {
-      item->prev = NULL;
-    }
-    else {
-      item->prev = obCollectLayers(layersDir, info.underlayer, lowerPath, count);
-    }
-    *count += 1;
   }
   return item;
 }
@@ -315,7 +313,14 @@ int main(int argc, char* argv[])
   uint8_t count = 0;
   ObLayerItem* topLayer = obCollectLayers(layersPath, context->headLayer, lowerPath, &count);
 
-  char* layers[count + 1];
+  if (count == 0 && !topLayer) {
+    topLayer = calloc(1, sizeof(ObLayerItem));
+    strcpy(topLayer->layerPath, lowerPath);
+    topLayer->prev = NULL;
+    count = 1;
+  }
+
+  char* layers[count];
 
   obLogI("Collected layers:");
   ObLayerItem* layerItem = topLayer;

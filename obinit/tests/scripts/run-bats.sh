@@ -8,7 +8,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 propagation=$(findmnt -rn -o PROPAGATION /)
 
 if [[ "$propagation" != "private" ]]; then
-    echo "Root propagation is $propagation, please mark / as private"
+    echo "Root propagation is $propagation, please make '/' private"
     exit 1
 fi
 

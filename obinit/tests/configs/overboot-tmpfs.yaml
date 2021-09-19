@@ -3,7 +3,7 @@ layers:
   visible: true
   device: "/dev/ob_test.img"
   repository: "overboot"
-  head: "20190330-2-third-test-layer"
+  head: "third-test-layer"
 upper:
   type: "tmpfs"
   size: "4096k"

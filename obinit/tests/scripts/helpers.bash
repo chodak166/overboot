@@ -48,9 +48,9 @@ TEST_DURABLE_FILE_1="/test/persistent_file_1"
 TEST_DURABLE_FILE_2="/test/persistent_file_2"
 TEST_DURABLE_VALUE="durable value"
 
-TEST_LAYER_1_NAME="20190202-1-first-test-layer.obld"
-TEST_LAYER_2_NAME="20190330-1-second-test-layer.obld"
-TEST_LAYER_3_NAME="20190330-2-third-test-layer.obld"
+TEST_LAYER_1_NAME="first-test-layer.obld"
+TEST_LAYER_2_NAME="second-test-layer.obld"
+TEST_LAYER_3_NAME="third-test-layer.obld"
 
 TEST_OB_OVERLAY_DIR="$TEST_RAMFS_DIR/overlay"
 

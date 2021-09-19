@@ -216,20 +216,20 @@ teardown()
   [[ "$value3" == "$expectedValue3" ]]
 }
 
-# @test "obinit should assume 'root' head layer if not configured" {
+@test "obinit should assume 'root' head layer if not configured" {
 
-#   $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-nohead.yaml"
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-nohead.yaml"
 
-#   [ ! -f "$TEST_ROOTMNT_DIR/test/file1" ]
-#   [ -f "TEST_OB_CONFIG_PATH" ]
-# }
+  [ ! -f "$TEST_ROOTMNT_DIR/test/file1" ]
+  [ -f "$TEST_OB_CONFIG_PATH" ]
+}
 
-# @test "obinit should not mount root if the bottom layer's underlayer is 'none'" {
-#    $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-noroot.yaml"
+@test "obinit should not mount root if the bottom layer's underlayer is 'none'" {
+   $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-altroot.yaml"
 
-#   [ -f "$TEST_ROOTMNT_DIR/test/file4" ]
-#   [ ! -f "TEST_OB_CONFIG_PATH" ]
-# }
+  [ -f "$TEST_ROOTMNT_DIR/test/file4" ]
+  [ ! -f "TEST_OB_CONFIG_PATH" ]
+}
 
 # @test "obinit restore original rootmnt after failure" {
 #  skip

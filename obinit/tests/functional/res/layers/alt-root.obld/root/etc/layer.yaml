@@ -1,0 +1,5 @@
+name:         "alt root test layer"
+author:       "anonymous"
+create_ts:    "2019-03-30T17:00:00Z"
+description:  "test layer 4 - alternative root"
+underlayer:   "none"
