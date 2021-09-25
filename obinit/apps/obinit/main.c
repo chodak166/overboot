@@ -362,7 +362,7 @@ int main(int argc, char* argv[])
   // ---------- Bind /overlay into $rootmnt ----------
 
   char bindedOverlay[OB_PATH_MAX];
-  sprintf(bindedOverlay, "%s/overlay", rootmntPath);
+  sprintf(bindedOverlay, "%s/%s", rootmntPath, OB_USER_BINDINGS_DIR);
   obRbind(context->overlayDir, bindedOverlay);
 
   if (context->bindLayers) {

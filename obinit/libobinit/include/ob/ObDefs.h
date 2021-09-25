@@ -58,6 +58,10 @@
 #define OB_OVERLAY_DIR "/overlay"
 #endif
 
+#ifndef OB_USER_BINDINGS_DIR
+#define OB_USER_BINDINGS_DIR "/overboot"
+#endif
+
 #ifndef OB_LAYERS_DIR_NAME
 #define OB_LAYERS_DIR_NAME "layers"
 #endif

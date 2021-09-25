@@ -14,7 +14,7 @@
 #     ├── etc                    # user /etc dir
 #     │   ├── layer.yaml         # head layer metadata (RO)
 #     │   └── overboot.yaml      # overboot config file, (RW durable)
-#     └── overboot               # usrer bindings directory
+#     └── overboot               # user bindings directory
 #         ├── layers             # /obdev/overboot/layers binding
 #         ├── lower-root         # /overlay/lower-root binding
 #         └── upper              # /overlay/upper binding
@@ -36,6 +36,7 @@ TEST_MNT_DIR="$TEST_TMP_DIR/mnt"
 
 TEST_RAMFS_DIR="$TEST_TMP_DIR/ramfs"
 TEST_ROOTMNT_DIR="$TEST_RAMFS_DIR/root"
+TEST_ROOTMNT_BINDINGS_DIR="$TEST_ROOTMNT_DIR/overboot"
 TEST_OB_DEVICE_PATH="$TEST_RAMFS_DIR/dev/ob_test.img"
 TEST_OB_DEVICE_MNT_PATH="$TEST_RAMFS_DIR/obmnt"
 TEST_OB_REPOSITORY_NAME="overboot"
