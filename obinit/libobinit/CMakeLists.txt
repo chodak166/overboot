@@ -13,9 +13,15 @@ add_library(${TARGET} STATIC
   src/ObYamlParser.c
   src/ObYamlConfigReader.c
   src/ObYamlLayerReader.c
+  src/ObConfig.c
+
+  extern/sds/sds.c
   )
 
 target_include_directories(${TARGET}
   PUBLIC
   ${CMAKE_CURRENT_LIST_DIR}/include
+
+  PRIVATE
+  ${CMAKE_CURRENT_LIST_DIR}/extern/sds
   )

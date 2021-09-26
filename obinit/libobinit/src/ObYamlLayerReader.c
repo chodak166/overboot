@@ -30,6 +30,10 @@ static void onScalarValue(ObLayerInfo* info, const char* itemPath, const char* v
   }
 }
 
+
+// --------- public API ---------- //
+
+
 ObLayerInfo* obLoadLayerInfo(const char* repoPath, const char* layerName, ObLayerInfo* info)
 {
   char path[OB_PATH_MAX];

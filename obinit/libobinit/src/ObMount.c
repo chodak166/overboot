@@ -23,49 +23,49 @@
 //TODO: add info logs
 
 //TODO: split it
-bool obMountDevice(const ObContext* context)
+bool obMountDevice(const char* device, const char* mountPoint)
 {
-  int result = obMkpath(context->devMountPoint, OB_DEV_MOUNT_MODE);
+  int result = obMkpath(mountPoint, OB_DEV_MOUNT_MODE);
   if (result != 0) {
-    obLogE("Cannot create %s: %s", context->devMountPoint, strerror(errno));
+    obLogE("Cannot create %s: %s", mountPoint, strerror(errno));
     return false;
   }
 
-  obLogI("Directory %s created", context->devMountPoint);
+  obLogI("Directory %s created", mountPoint);
 
   struct stat devStat;
-  result = lstat(context->devicePath, &devStat);
+  result = lstat(device, &devStat);
   if (result != 0) {
-    obLogE("Cannot stat %s: %s", context->devicePath, strerror(errno));
+    obLogE("Cannot stat %s: %s", device, strerror(errno));
     return false;
   }
 
   if (S_ISBLK(devStat.st_mode)) {
-    obLogI("%s is a block device", context->devicePath);
-    result = mount(context->devicePath, context->devMountPoint,
+    obLogI("%s is a block device", device);
+    result = mount(device, mountPoint,
                    OB_DEV_IMAGE_FS, OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS);
     if (result != 0) {
       obLogE("Cannot mount %s in %s: %s",
-             context->devicePath, context->devMountPoint, strerror(errno));
+             device, mountPoint, strerror(errno));
       return false;
     }
 
   }
   else if (S_ISREG(devStat.st_mode)){
-    obLogI("%s is a regular file", context->devicePath);
+    obLogI("%s is a regular file", device);
 
     char loopDevice[OB_DEV_PATH_MAX];
-    int loopDeviceFd = obMountLoopDevice(context->devicePath, loopDevice);
+    int loopDeviceFd = obMountLoopDevice(device, loopDevice);
 
     if (loopDeviceFd < 0) {
       obLogE("Loop device mount failed");
       return false;
     }
 
-    if (mount(loopDevice, context->devMountPoint, OB_DEV_IMAGE_FS,
+    if (mount(loopDevice, mountPoint, OB_DEV_IMAGE_FS,
               OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS) < 0) {
         obLogE("Mounting %s in %s failed with error: %s",
-               loopDevice, context->devMountPoint, strerror(errno));
+               loopDevice, mountPoint, strerror(errno));
     }
 
     obFreeLoopDevice(loopDeviceFd);
@@ -84,9 +84,9 @@ bool obUnmount(const char* path)
   return true;
 }
 
-bool obUnmountDevice(ObContext* context)
+bool obUnmountDevice(const char* mountPoint)
 {
-  return obUnmount(context->devMountPoint);
+  return obUnmount(mountPoint);
 }
 
 bool obRbind(const char* srcPath, const char* dstPath)
@@ -222,19 +222,20 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
 }
 
 //TODO check mkpath status
-bool obPrepareOverlay(const ObContext* context)
+bool obPrepareOverlay(const char* overlayDir, const char* tmpfsSize)
 {
-  obMkpath(context->overlayDir, OB_MKPATH_MODE);
-  obMountTmpfs(context->overlayDir, context->tmpfsSize);
+  //TODO sds
+  obMkpath(overlayDir, OB_MKPATH_MODE);
+  obMountTmpfs(overlayDir, tmpfsSize);
 
   char path[OB_DEV_PATH_MAX];
-  sprintf(path, "%s/work", context->overlayDir);
+  sprintf(path, "%s/work", overlayDir);
   obMkpath(path, OB_MKPATH_MODE);
 
-  sprintf(path, "%s/lower", context->overlayDir);
+  sprintf(path, "%s/lower", overlayDir);
   obMkpath(path, OB_MKPATH_MODE);
 
-  sprintf(path, "%s/upper", context->overlayDir);
+  sprintf(path, "%s/upper", overlayDir);
   obMkpath(path, OB_MKPATH_MODE);
 
   return true;

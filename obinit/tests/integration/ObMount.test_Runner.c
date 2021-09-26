@@ -3,6 +3,7 @@
 /*=======Automagically Detected Files To Include=====*/
 #include "unity.h"
 #include "ob/ObMount.h"
+#include "ob/ObContext.h"
 #include "ObTestHelpers.h"
 #include <stdlib.h>
 #include <string.h>
@@ -87,15 +88,15 @@ static void run_test(UnityTestFunction func, const char* name, UNITY_LINE_TYPE l
 int main(void)
 {
   UnityBegin("../../../tests/integration/ObMount.test.c");
-  run_test(test_obMountDevice_shouldReturnTrueOnSuccessfulMount, "test_obMountDevice_shouldReturnTrueOnSuccessfulMount", 52);
-  run_test(test_obMountDevice_shouldMakeFilesReadableAfterImageMount, "test_obMountDevice_shouldMakeFilesReadableAfterImageMount", 60);
-  run_test(test_obMountDevice_shouldMakeFilesReadableAfterDeviceMount, "test_obMountDevice_shouldMakeFilesReadableAfterDeviceMount", 72);
-  run_test(test_obMountDevice_shouldFailWhenWrongPath, "test_obMountDevice_shouldFailWhenWrongPath", 90);
-  run_test(test_obUnmount_shouldFailWhenPathNotMounted, "test_obUnmount_shouldFailWhenPathNotMounted", 98);
-  run_test(test_obUnmountDevice_shouldUnmountMountedDevice, "test_obUnmountDevice_shouldUnmountMountedDevice", 106);
-  run_test(test_obRbind_shouldMakeFilesAccessibleAfterBind, "test_obRbind_shouldMakeFilesAccessibleAfterBind", 120);
-  run_test(test_obMountTmpfs_shouldCreateDirAndMakeItWritable, "test_obMountTmpfs_shouldCreateDirAndMakeItWritable", 141);
-  run_test(test_obMountOverlay_shouldMergeAllGivenLayers, "test_obMountOverlay_shouldMergeAllGivenLayers", 159);
+  run_test(test_obMountDevice_shouldReturnTrueOnSuccessfulMount, "test_obMountDevice_shouldReturnTrueOnSuccessfulMount", 53);
+  run_test(test_obMountDevice_shouldMakeFilesReadableAfterImageMount, "test_obMountDevice_shouldMakeFilesReadableAfterImageMount", 61);
+  run_test(test_obMountDevice_shouldMakeFilesReadableAfterDeviceMount, "test_obMountDevice_shouldMakeFilesReadableAfterDeviceMount", 73);
+  run_test(test_obMountDevice_shouldFailWhenWrongPath, "test_obMountDevice_shouldFailWhenWrongPath", 91);
+  run_test(test_obUnmount_shouldFailWhenPathNotMounted, "test_obUnmount_shouldFailWhenPathNotMounted", 99);
+  run_test(test_obUnmountDevice_shouldUnmountMountedDevice, "test_obUnmountDevice_shouldUnmountMountedDevice", 107);
+  run_test(test_obRbind_shouldMakeFilesAccessibleAfterBind, "test_obRbind_shouldMakeFilesAccessibleAfterBind", 121);
+  run_test(test_obMountTmpfs_shouldCreateDirAndMakeItWritable, "test_obMountTmpfs_shouldCreateDirAndMakeItWritable", 142);
+  run_test(test_obMountOverlay_shouldMergeAllGivenLayers, "test_obMountOverlay_shouldMergeAllGivenLayers", 160);
 
   return UnityEnd();
 }

@@ -7,36 +7,18 @@
 #define OBCONTEXT_H
 
 #include "ob/ObDefs.h"
+#include "ob/ObConfig.h"
 
 #include <stdbool.h>
 #include <inttypes.h>
 
-typedef struct ObDurable
-{
-  char path[OB_PATH_MAX];
-  bool copyOrigin;
-  struct ObDurable* next;
-} ObDurable;
-
 typedef struct ObContext
 {
-  char prefix[OB_PREFIX_MAX];
-  char devicePath[OB_PATH_MAX];
+  struct ObConfig config;
 
-  char headLayer[OB_NAME_MAX];
-  char repository[OB_PATH_MAX];
-  char tmpfsSize[16];
-
-  bool enabled;
-  bool bindLayers;
-  bool useTmpfs;
-  bool clearUpper;
-
-  ObDurable* durable;
-
-  char devMountPoint[OB_DEV_PATH_MAX];
-  char overlayDir[OB_DEV_PATH_MAX];
-
+  char* devMountPoint;
+  char* overbootDir;
+  char* root;
 } ObContext;
 
 /**
@@ -66,8 +48,9 @@ void obFreeObContext(ObContext** context);
  */
 bool obFindDevice(ObContext* context);
 
-void obAddDurable(ObContext* context, const char* path, bool copyOrigin);
-
-int obCountDurables(ObContext* context);
+/**
+ * @brief Dump given context to stdout/kmsg
+ */
+void logObContext(const ObContext* context);
 
 #endif // OBCONTEXT_H

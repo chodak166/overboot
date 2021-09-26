@@ -220,55 +220,37 @@ int main(int argc, char* argv[])
   // ---------- Load config ----------
 
   ObContext* context = obCreateObContext(options.rootPrefix);
-
-  obLoadYamlConfig(context, options.configFile);
-
-  obLogI("enabled: %i", context->enabled);
-  obLogI("use tmpfs: %i", context->useTmpfs);
-  obLogI("tmpfs size: %s", context->tmpfsSize);
-  obLogI("bind layers: %i", context->bindLayers);
-  obLogI("Device path: %s", context->devicePath);
-  obLogI("head layer: %s", context->headLayer);
-  obLogI("repo: %s", context->repository);
-
-  int durablesCount = obCountDurables(context);
-
-  obLogI("durables (%i):", durablesCount);
-
-  ObDurable* durable = context->durable;
-  while (durable != NULL) {
-    obLogI("path: %s, copy_origin: %i", durable->path, durable->copyOrigin);
-    durable = durable->next;
-  }
+  ObConfig* config = &context->config;
+  obLoadYamlConfig(config, options.configFile);
 
   // ---------- Mount persistent device ----------
 
   if (!obFindDevice(context)) {
-    obLogE("Device %s not found", context->devicePath);
+    obLogE("Device %s not found", config->devicePath);
     return EXIT_FAILURE;
   }
 
-  if (!obMountDevice(context)) {
-    obLogE("Device mount (%s -> %s) failed", context->devicePath, context->devMountPoint);
+  if (!obMountDevice(config->devicePath, context->devMountPoint)) {
+    obLogE("Device mount (%s -> %s) failed", config->devicePath, context->devMountPoint);
     return EXIT_FAILURE;
   }
 
   \
   // ---------- Prepare /overlay ----------
 
-  if (!obPrepareOverlay(context)) {
-    obLogE("Cannot prepare overlay dir (%s)", context->overlayDir);
+  if (!obPrepareOverlay(context->overbootDir, config->tmpfsSize)) {
+    obLogE("Cannot prepare overboot dir (%s)", context->overbootDir);
     return EXIT_FAILURE;
   }
 
   char upperPath[OB_DEV_PATH_MAX];
-  sprintf(upperPath, "%s/upper", context->overlayDir);
+  sprintf(upperPath, "%s/upper", context->overbootDir);
 
-  if (!context->useTmpfs) {
+  if (!config->useTmpfs) {
     char srcPath[OB_PATH_MAX];
-    sprintf(srcPath, "%s/%s/upper", context->devMountPoint, context->repository);
+    sprintf(srcPath, "%s/%s/upper", context->devMountPoint, config->repository);
 
-    if (context->clearUpper) {
+    if (config->clearUpper) {
       obLogI("Clearing upper directory (%s)", srcPath);
       obRemoveDirR(srcPath);
       obMkpath(srcPath, OB_MKPATH_MODE);
@@ -283,35 +265,26 @@ int main(int argc, char* argv[])
 
   // ---------- Move $rootmnt ----------
 
-  char rootmntPath[OB_PATH_MAX];
   char lowerPath[OB_PATH_MAX];
 
-  char* rootmnt = getenv("rootmnt");
-  if (rootmnt != NULL) {
-    sprintf(rootmntPath, "%s%s", context->prefix, rootmnt);
-  }
-  else {
-    sprintf(rootmntPath, "%s/root", context->prefix);
-    obLogI("The rootmnt environment variable not set, using %s", rootmntPath);
-  }
-  sprintf(lowerPath, "%s/lower-root", context->overlayDir);
-  obLogI("Moving %s to %s", rootmntPath, lowerPath);
-  obMove(rootmntPath, lowerPath);
+  sprintf(lowerPath, "%s/lower-root", context->overbootDir);
+  obLogI("Moving %s to %s", context->root, lowerPath);
+  obMove(context->root, lowerPath);
 
   // ---------- Mount overlayfs ----------
 
   char workPath[OB_DEV_PATH_MAX];
-  sprintf(workPath, "%s/work", context->overlayDir);
+  sprintf(workPath, "%s/work", context->overbootDir);
 
   char repoPath[OB_PATH_MAX];
-  sprintf(repoPath, "%s/%s", context->devMountPoint, context->repository);
+  sprintf(repoPath, "%s/%s", context->devMountPoint, config->repository);
   char layersPath[OB_PATH_MAX];
   sprintf(layersPath, "%s/%s", repoPath, OB_LAYERS_DIR_NAME);
 
 //  char** layers = malloc(1 * sizeof(char*));
 
   uint8_t count = 0;
-  ObLayerItem* topLayer = obCollectLayers(layersPath, context->headLayer, lowerPath, &count);
+  ObLayerItem* topLayer = obCollectLayers(layersPath, config->headLayer, lowerPath, &count);
 
   if (count == 0 && !topLayer) {
     topLayer = calloc(1, sizeof(ObLayerItem));
@@ -348,7 +321,7 @@ int main(int argc, char* argv[])
 //  obCollectLayers(repoPath, context->headLayer,
 //                  lowerPath, layers, &layerCount);
 
-  if (!obMountOverlay(layers, count, upperPath, workPath, rootmntPath)) {
+  if (!obMountOverlay(layers, count, upperPath, workPath, context->root)) {
     obLogE("Cannot mount overlay");
   }
 
@@ -362,10 +335,10 @@ int main(int argc, char* argv[])
   // ---------- Bind /overlay into $rootmnt ----------
 
   char bindedOverlay[OB_PATH_MAX];
-  sprintf(bindedOverlay, "%s/%s", rootmntPath, OB_USER_BINDINGS_DIR);
-  obRbind(context->overlayDir, bindedOverlay);
+  sprintf(bindedOverlay, "%s/%s", context->root, OB_USER_BINDINGS_DIR);
+  obRbind(context->overbootDir, bindedOverlay);
 
-  if (context->bindLayers) {
+  if (config->bindLayers) {
     char layersDir[OB_PATH_MAX];
     char bindedLayersDir[OB_PATH_MAX];
     sprintf(layersDir, "%s/layers", repoPath);
@@ -379,20 +352,20 @@ int main(int argc, char* argv[])
   // ---------- Update fstab ----------
 
   char mtabPath[OB_PATH_MAX];
-  sprintf(mtabPath, "%s/etc/mtab", context->prefix);
+  sprintf(mtabPath, "%s/etc/mtab", config->prefix);
 
-  updateFstab(rootmntPath, mtabPath);
+  updateFstab(context->root, mtabPath);
 
 
   // ---------- Bind durables ----------
 
-  durable = context->durable;
+  ObDurable* durable = config->durable;
   while (durable != NULL) {
     char persistentPath[OB_PATH_MAX];
     char bindPath[OB_PATH_MAX];
 
     sprintf(persistentPath, "%s/%s%s", repoPath, OB_DURABLES_DIR_NAME, durable->path);
-    sprintf(bindPath, "%s%s", rootmntPath, durable->path);
+    sprintf(bindPath, "%s%s", context->root, durable->path);
 
     if (!obExists(bindPath)) {
       obMkpath(bindPath, OB_MKPATH_MODE);

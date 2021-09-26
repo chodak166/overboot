@@ -1,5 +1,6 @@
 #include "unity.h"
 #include "ob/ObMount.h"
+#include "ob/ObContext.h"
 #include "ObTestHelpers.h"
 
 #include <stdlib.h>
@@ -36,35 +37,35 @@ ObContext helper_getObContext()
   ObContext context;
   obInitializeObContext(&context, prefix);
 
-  strcpy(context.devicePath, TEST_DEVICE_IMAGE_PATH);
+  strcpy(context.config.devicePath, TEST_DEVICE_IMAGE_PATH);
   obFindDevice(&context);
 
   return context;
 }
 
-char* helper_readTestFile(const ObContext* context, char* content)
+char* helper_readTestFile(const char* prefix, char* content)
 {
   char testFilePath[OB_PATH_MAX];
-  sprintf(testFilePath, "%s%s/%s", context->prefix, OB_DEV_MOUNT_POINT, TEST_MOUNTED_FILE_PATH);
+  sprintf(testFilePath, "%s%s/%s", prefix, OB_DEV_MOUNT_POINT, TEST_MOUNTED_FILE_PATH);
   return obReadFile(testFilePath, content);
 }
 
 void test_obMountDevice_shouldReturnTrueOnSuccessfulMount()
 {
   ObContext context = helper_getObContext();
-  bool mountResult = obMountDevice(&context);
-  obUnmountDevice(&context);
+  bool mountResult = obMountDevice(context.config.devicePath, context.devMountPoint);
+  obUnmountDevice(context.devMountPoint);
   TEST_ASSERT_TRUE(mountResult);
 }
 
 void test_obMountDevice_shouldMakeFilesReadableAfterImageMount()
 {
   ObContext context = helper_getObContext();
-  obMountDevice(&context);
+  obMountDevice(context.config.devicePath, context.devMountPoint);
 
   char content[16];
-  helper_readTestFile(&context, content);
-  obUnmountDevice(&context);
+  helper_readTestFile(context.config.prefix, content);
+  obUnmountDevice(context.devMountPoint);
 
   TEST_ASSERT_EQUAL_STRING(TEST_MOUNTED_FILE_VALUE, content);
 }
@@ -73,16 +74,16 @@ void test_obMountDevice_shouldMakeFilesReadableAfterDeviceMount()
 {
   ObContext context = helper_getObContext();
   char loopDevice[OB_PATH_MAX];
-  int loopDev = obMountLoopDevice(context.devicePath, loopDevice);
+  int loopDev = obMountLoopDevice(context.config.devicePath, loopDevice);
 
-  strcpy(context.devicePath, loopDevice);
-  obMountDevice(&context);
+  strcpy(context.config.devicePath, loopDevice);
+  obMountDevice(context.config.devicePath, context.devMountPoint);
 
   obFreeLoopDevice(loopDev);
 
   char content[16];
-  helper_readTestFile(&context, content);
-  obUnmountDevice(&context);
+  helper_readTestFile(context.config.prefix, content);
+  obUnmountDevice(context.devMountPoint);
 
   TEST_ASSERT_EQUAL_STRING(TEST_MOUNTED_FILE_VALUE, content);
 }
@@ -90,8 +91,8 @@ void test_obMountDevice_shouldMakeFilesReadableAfterDeviceMount()
 void test_obMountDevice_shouldFailWhenWrongPath()
 {
   ObContext context = helper_getObContext();
-  strcpy(context.devicePath, TEST_WRONG_DEVICE_PATH);
-  bool result = obMountDevice(&context);
+  strcpy(context.config.devicePath, TEST_WRONG_DEVICE_PATH);
+  bool result = obMountDevice(context.config.devicePath, context.devMountPoint);
   TEST_ASSERT_FALSE(result);
 }
 
@@ -109,8 +110,8 @@ void test_obUnmountDevice_shouldUnmountMountedDevice()
   char testFile[OB_PATH_MAX];
   obConcatPaths(testFile, context.devMountPoint, TEST_MOUNTED_FILE_PATH);
 
-  bool mntResult = obMountDevice(&context);
-  bool umntResult = obUnmountDevice(&context);
+  bool mntResult = obMountDevice(context.config.devicePath, context.devMountPoint);
+  bool umntResult = obUnmountDevice(context.devMountPoint);
   int accessResult = access(testFile, F_OK);
   TEST_ASSERT_TRUE(mntResult);
   TEST_ASSERT_TRUE(umntResult);

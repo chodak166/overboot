@@ -82,6 +82,9 @@ static char* obDecorateLog(char* log, const char* msg, const char* severity, va_
 }
 
 
+// --------- public API ---------- //
+
+
 void obInitLogger(bool stdOut, bool kmsgOut)
 {
   obLoggerSettings.stdOut = stdOut;

@@ -100,6 +100,9 @@ static bool obEnsureParentExists(const char* path)
   return true;
 }
 
+
+// --------- public API ---------- //
+
 int obMkpath(const char* path, mode_t mode)
 {
   char* origPath = strdup(path);

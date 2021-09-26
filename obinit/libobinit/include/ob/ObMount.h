@@ -7,13 +7,13 @@
 #define OBMOUNT_H
 
 #include <stdbool.h>
-#include "ob/ObContext.h"
+#include "ob/ObConfig.h"
 
-bool obMountDevice(const ObContext* context);
+bool obMountDevice(const char* device, const char* mountPoint);
 
 bool obUnmount(const char* path);
 
-bool obUnmountDevice(ObContext* context);
+bool obUnmountDevice(const char* mountPoint);
 
 bool obRbind(const char* srcPath, const char* dstPath);
 
@@ -28,6 +28,6 @@ void obFreeLoopDevice(int deviceFd);
 bool obMountOverlay(char** layers, int layerCount, const char* upper,
                     const char* work, const char* mountPoint);
 
-bool obPrepareOverlay(const ObContext* context);
+bool obPrepareOverlay(const char* overlayDir, const char* tmpfsSize);
 
 #endif // OBMOUNT_H

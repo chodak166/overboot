@@ -6,9 +6,8 @@
 #ifndef OBYAMLCONFIGREADER_H
 #define OBYAMLCONFIGREADER_H
 
-//struct ObContext;
-typedef struct ObContext ObContext;
+typedef struct ObConfig ObConfig;
 
-void obLoadYamlConfig(ObContext* context, const char* path);
+void obLoadYamlConfig(ObConfig* config, const char* path);
 
 #endif // OBYAMLCONFIGREADER_H

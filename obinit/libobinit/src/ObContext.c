@@ -6,42 +6,60 @@
 #include "ob/ObContext.h"
 
 #include "ob/ObOsUtils.h"
+#include "ob/ObLogging.h"
+#include "sds.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
 #include <sys/stat.h>
 
-static void obFreeDurable(ObDurable* durable)
-{
-  if (durable == NULL) {
-    return;
-  }
+static const char* ROOTMNT_ENV_VAR = "rootmnt";
+static const char* DEFAULT_ROOTMNT = "/root";
+static const char* DEFAULT_TMPFS_SIZE = "50%";
+static const char* DEFAULT_REPO_NAME = "overboot";
 
-  if (durable->next != NULL) {
-    obFreeDurable(durable->next);
-  }
-  free(durable);
+static bool obIsValidDevice(const char* path)
+{
+  //TODO: consider allowing using directory as device
+  return obIsBlockDevice(path)
+      || obIsFile(path);
 }
+
+
+// --------- public API ---------- //
 
 void obInitializeObContext(ObContext* context, const char* prefix)
 {
-  strcpy(context->prefix, prefix);
-  strcpy(context->devicePath, "");
-  strcpy(context->headLayer, "");
-  strcpy(context->repository, "overboot");
-  strcpy(context->tmpfsSize, "50%");
+  ObConfig* config = &context->config;
+  strcpy(config->prefix, prefix);
+  strcpy(config->devicePath, "");
+  strcpy(config->headLayer, "");
+  strcpy(config->repository, DEFAULT_REPO_NAME);
+  strcpy(config->tmpfsSize, DEFAULT_TMPFS_SIZE);
 
-  context->enabled = true;
-  context->bindLayers = true;
-  context->useTmpfs = true;
-  context->clearUpper = false;
+  config->enabled = true;
+  config->bindLayers = true;
+  config->useTmpfs = true;
+  config->clearUpper = false;
 
-  context->durable = NULL;
+  config->durable = NULL;
 
-  sprintf(context->devMountPoint, "%s%s", prefix, OB_DEV_MOUNT_POINT);
-  sprintf(context->overlayDir, "%s%s", prefix, OB_OVERLAY_DIR);
+  context->devMountPoint = sdsnew(prefix);
+  context->devMountPoint = sdscat(context->devMountPoint, OB_DEV_MOUNT_POINT);
+
+  context->overbootDir = sdsnew(prefix);
+  context->overbootDir = sdscat(context->overbootDir, OB_OVERLAY_DIR);
+
+  context->root = sdsnew(prefix);
+  char* rootmnt = getenv(ROOTMNT_ENV_VAR);
+  if (rootmnt != NULL) {
+    context->root = sdscat(context->root, rootmnt);
+  }
+  else {
+    context->root = sdscat(context->root, DEFAULT_ROOTMNT);
+    obLogI("The rootmnt environment variable not set, using %s", context->root);
+  }
 }
 
 ObContext* obCreateObContext(const char* prefix)
@@ -53,62 +71,60 @@ ObContext* obCreateObContext(const char* prefix)
 
 void obFreeObContext(ObContext** context)
 {
-  obFreeDurable((*context)->durable);
+  sdsfree((*context)->devMountPoint);
+  sdsfree((*context)->overbootDir);
+  sdsfree((*context)->root);
+  obFreeDurable((*context)->config.durable);
   free(*context);
   *context = NULL;
 }
 
-
-static bool obIsValidDevice(const char* path)
-{
-  //TODO: consider allowing using directory as device
-  return obIsBlockDevice(path)
-      || obIsFile(path);
-}
-
 bool obFindDevice(ObContext* context)
 {
+  ObConfig* config = &context->config;
   bool result = true;
   //TODO: consider allowing using directory as device
-  if (!obIsValidDevice(context->devicePath)) {
+  if (!obIsValidDevice(config->devicePath)) {
     char newPath[OB_DEV_PATH_MAX];
-    strcpy(newPath, context->prefix);
-    strncat(newPath, context->devicePath, OB_DEV_PATH_MAX);
+    strcpy(newPath, config->prefix);
+    strncat(newPath, config->devicePath, OB_DEV_PATH_MAX);
     if (!obIsValidDevice(newPath)) {
-      strcpy(newPath, context->prefix);
-      strcat(newPath, "/rootmnt");
-      strncat(newPath, context->devicePath, OB_DEV_PATH_MAX);
+      strcpy(newPath, config->prefix);
+      strcat(newPath, context->root);
+      strncat(newPath, config->devicePath, OB_DEV_PATH_MAX);
       if (!obIsValidDevice(newPath)) {
         result = false;
       }
     }
     if (result) {
-      strcpy(context->devicePath, newPath);
+      strcpy(config->devicePath, newPath);
     }
   }
   return result;
 }
 
-void obAddDurable(ObContext* context, const char* path, bool copyOrigin)
+void logObContext(const ObContext* context)
 {
-  ObDurable* durable = malloc(sizeof(ObDurable));
-  strcpy(durable->path, path);
-  durable->copyOrigin = copyOrigin;
-  durable->next = context->durable;
-  context->durable = durable;
-}
+  const ObConfig* config = &context->config;
+  obLogI("enabled: %i", config->enabled);
+  obLogI("use tmpfs: %i", config->useTmpfs);
+  obLogI("tmpfs size: %s", config->tmpfsSize);
+  obLogI("bind layers: %i", config->bindLayers);
+  obLogI("Device path: %s", config->devicePath);
+  obLogI("head layer: %s", config->headLayer);
+  obLogI("repository: %s", config->repository);
 
-static void obCountDurablesRecursive(ObDurable* durable, int* count)
-{
-  if (durable != NULL) {
-    *count += 1;
-    obCountDurablesRecursive(durable->next, count);
+  int durablesCount = obCountDurables(config);
+  obLogI("durables (%i):", durablesCount);
+
+  ObDurable* durable = config->durable;
+  while (durable != NULL) {
+    obLogI("path: %s, copy_origin: %i", durable->path, durable->copyOrigin);
+    durable = durable->next;
   }
+
+  obLogI("ramfs overlay dir: %s", context->overbootDir);
+  obLogI("repository device mount point: %s", context->devMountPoint);
+  obLogI("root path: %s", context->root);
 }
 
-int obCountDurables(ObContext* context)
-{
-  int count = 0;
-  obCountDurablesRecursive(context->durable, &count);
-  return count;
-}

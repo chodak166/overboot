@@ -26,6 +26,9 @@ static char* popKey(char* path)
 }
 
 
+// --------- public API ---------- //
+
+
 bool obParseYamlFile(void* context, const char* path, ObYamlValueCallback valueCallback, ObYamlEntryCallback entryCallback)
 {
   FILE *configFile = fopen(path, "r");
