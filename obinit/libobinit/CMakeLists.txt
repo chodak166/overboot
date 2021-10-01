@@ -14,6 +14,8 @@ add_library(${TARGET} STATIC
   src/ObYamlConfigReader.c
   src/ObYamlLayerReader.c
   src/ObConfig.c
+  src/ObInit.c
+  src/ObFstab.c
 
   extern/sds/sds.c
   )

@@ -44,23 +44,25 @@ teardown()
 }
 
 @test "obinit should bind upper directory from the persistent device if configured" {
- $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml"
-  
- SAMPLE_FILE="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/upper/binded_upper_sample_file"
- BINDED_SAMPLE_FILE="$TEST_OB_OVERLAY_DIR/upper/binded_upper_sample_file"
-
- mkdir -p $(dirname "$SAMPLE_FILE")
- echo $RANDOM > "$SAMPLE_FILE"
-
- mount | grep -q "$TEST_OB_OVERLAY_DIR/upper type"
- mntStatus=$?
-  
- mntTmpfsStatus=0
- mount | grep -q "$TEST_OB_OVERLAY_DIR/upper type tmpfs" || mntTmpfsStatus=1
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml"
+   
+  SAMPLE_FILE="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/upper/binded_upper_sample_file"
+  BINDED_SAMPLE_FILE="$TEST_OB_OVERLAY_DIR/upper/binded_upper_sample_file"
  
- cmp "$SAMPLE_FILE" "$BINDED_SAMPLE_FILE"
- [ "$mntStatus" -eq 0 ]
- [ "$mntTmpfsStatus" -eq 1 ]
+  mkdir -p $(dirname "$SAMPLE_FILE")
+  echo $RANDOM > "$SAMPLE_FILE"
+ 
+  mount
+ 
+  mount | grep -q "$TEST_OB_OVERLAY_DIR/upper type"
+  mntStatus=$?
+   
+  mntTmpfsStatus=0
+  mount | grep -q "$TEST_OB_OVERLAY_DIR/upper type tmpfs" || mntTmpfsStatus=1
+  
+  cmp "$SAMPLE_FILE" "$BINDED_SAMPLE_FILE"
+  [ "$mntStatus" -eq 0 ]
+  [ "$mntTmpfsStatus" -eq 1 ]
 }
 
 @test "obinit should clear upper if configured" {

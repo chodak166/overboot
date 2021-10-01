@@ -6,19 +6,7 @@
 #ifndef OBYAMLLAYERREADER_H
 #define OBYAMLLAYERREADER_H
 
-#include "ob/ObDefs.h"
-
-//TODO: move the struct
-typedef struct ObLayerInfo
-{
-  char name[OB_NAME_MAX];
-  char author[OB_LAYER_AUTHOR_MAX];
-  char createTs[OB_TS_MAX];
-  char description[OB_LAYER_DESC_MAX];
-  char underlayer[OB_NAME_MAX];
-
-  char rootPath[OB_PATH_MAX];
-} ObLayerInfo;
+#include "ob/ObLayerInfo.h"
 
 ObLayerInfo* obLoadLayerInfo(const char* repoPath, const char* layerName, ObLayerInfo* info);
 

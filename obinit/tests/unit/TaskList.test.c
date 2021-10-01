@@ -4,11 +4,11 @@
 #include <stdbool.h>
 #include <assert.h>
 
-typedef bool (*TaskFunction)();
 
 typedef struct Task Task;
 typedef struct Task* TaskPtr;
 typedef void* TaskContext;
+typedef bool (*TaskFunction)(TaskContext);
 
 struct Task{
   TaskFunction exec;
