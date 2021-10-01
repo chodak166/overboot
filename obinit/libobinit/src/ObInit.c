@@ -10,6 +10,7 @@
 #include "ob/ObLogging.h"
 #include "ob/ObYamlLayerReader.h" // TODO: move
 #include "ObFstab.h"
+#include "sds.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -57,6 +58,54 @@ static ObLayerItem* obCollectLayers(const char* layersDir, const char* layerName
   return item;
 }
 
+static sds obGetUpperPath(const ObContext* context)
+{
+  sds upperPath = sdsnew(context->overbootDir);
+  return sdscat(upperPath, "/upper");
+}
+
+static sds obGetLowerRootPath(const ObContext* context)
+{
+  sds lowerPath = sdsnew(context->overbootDir);
+  return sdscat(lowerPath, "/lower-root");
+}
+
+static sds obGetRepoPath(const ObContext* context)
+{
+  sds repoPath = sdsempty();
+  return sdscatprintf(repoPath, "%s/%s", context->devMountPoint, context->config.repository);
+}
+
+static bool obBindPersistentUpperDir(const ObContext* context, sds upperPath)
+{
+  bool result = true;
+  const ObConfig* config = &context->config;
+
+  sds srcPath = sdsempty();
+  srcPath = sdscatprintf(srcPath, "%s/%s/upper", context->devMountPoint, config->repository);
+
+  if (config->clearUpper) {
+    obLogI("Clearing upper directory (%s)", srcPath);
+    if (!obRemoveDirR(srcPath)) {
+      result = false;
+    }
+    else if (obMkpath(srcPath, OB_MKPATH_MODE) != 0) {
+      result = false;
+    }
+  }
+  else if (!obExists(srcPath) && obMkpath(srcPath, OB_MKPATH_MODE) != 0) {
+    result = false;
+  }
+  else if (!obRbind(srcPath, upperPath)) {
+    result = false;
+  }
+
+  sdsfree(srcPath);
+  return result;
+}
+
+
+// --------- public API ---------- //
 
 
 bool obInitPersistentDevice(ObContext* context)
@@ -78,76 +127,57 @@ bool obInitPersistentDevice(ObContext* context)
 bool obInitOverbootDir(ObContext* context)
 {
   ObConfig* config = &context->config;
-
   if (!obPrepareOverlay(context->overbootDir, config->tmpfsSize)) {
     obLogE("Cannot prepare overboot dir (%s)", context->overbootDir);
     return false;
   }
 
-  char upperPath[OB_DEV_PATH_MAX];
-  sprintf(upperPath, "%s/upper", context->overbootDir);
+  bool result = true;
+  sds upperPath = obGetUpperPath(context);
 
-  if (!config->useTmpfs) {
-    char srcPath[OB_PATH_MAX];
-    sprintf(srcPath, "%s/%s/upper", context->devMountPoint, config->repository);
-
-    if (config->clearUpper) {
-      obLogI("Clearing upper directory (%s)", srcPath);
-      if (!obRemoveDirR(srcPath)) {
-        return false;
-      }
-      if (obMkpath(srcPath, OB_MKPATH_MODE) != 0) {
-        return false;
-      }
-
-    }
-    else if (!obExists(srcPath) && obMkpath(srcPath, OB_MKPATH_MODE) != 0) {
-      return false;
-    }
-
-    if (!obRbind(srcPath, upperPath)) {
-      return false;
-    }
+  if (!config->useTmpfs && !obBindPersistentUpperDir(context, upperPath)) {
+    result = false;
   }
 
-  return true;
+  sdsfree(upperPath);
+  return result;
 }
 
 
 bool obInitLowerRoot(ObContext* context)
 {
-  char lowerPath[OB_PATH_MAX];
+  bool result = true;
+  sds lowerPath = obGetLowerRootPath(context);
 
-  sprintf(lowerPath, "%s/lower-root", context->overbootDir);
   obLogI("Moving %s to %s", context->root, lowerPath);
-
   if (!obMove(context->root, lowerPath)) {
-    return false;
+    result = false;
   }
 
-  return true;
+  sdsfree(lowerPath);
+  return result;
 }
 
 
 bool obInitOverlayfs(ObContext* context)
 {
+  bool result = true;
   ObConfig* config = &context->config;
 
-  char workPath[OB_DEV_PATH_MAX];
-  sprintf(workPath, "%s/work", context->overbootDir);
+  sds workPath = sdsnew(context->overbootDir);
+  workPath = sdscat(workPath, "/work");
 
-  char repoPath[OB_PATH_MAX];
-  sprintf(repoPath, "%s/%s", context->devMountPoint, config->repository);
-  char layersPath[OB_PATH_MAX];
-  sprintf(layersPath, "%s/%s", repoPath, OB_LAYERS_DIR_NAME);
+  sds repoPath = sdsempty();
+  repoPath = sdscatprintf(repoPath, "%s/%s", context->devMountPoint, config->repository);
 
-  //TODO: use sds
-  char lowerPath[OB_PATH_MAX];
-  sprintf(lowerPath, "%s/lower-root", context->overbootDir);
+  sds layersPath = sdsempty();
+  layersPath = sdscatprintf(layersPath, "%s/%s", repoPath, OB_LAYERS_DIR_NAME);
+
+  sds lowerPath = obGetLowerRootPath(context);
+  sds upperPath = obGetUpperPath(context);
 
   uint8_t count = 0;
   ObLayerItem* topLayer = obCollectLayers(layersPath, config->headLayer, lowerPath, &count);
-
   if (count == 0 && !topLayer) {
     topLayer = calloc(1, sizeof(ObLayerItem));
     strcpy(topLayer->layerPath, lowerPath);
@@ -160,6 +190,7 @@ bool obInitOverlayfs(ObContext* context)
   obLogI("Collected layers:");
   ObLayerItem* layerItem = topLayer;
   uint8_t i = 0;
+
   while (layerItem) {
     layers[count - i - 1] = layerItem->layerPath;
     obLogI("Layer root path [%i]: %s", i, layerItem->layerPath);
@@ -167,77 +198,90 @@ bool obInitOverlayfs(ObContext* context)
     layerItem = layerItem->prev;
   }
 
-  //TODO: use sds
-  char upperPath[OB_DEV_PATH_MAX];
-  sprintf(upperPath, "%s/upper", context->overbootDir);
-
   if (!obMountOverlay(layers, count, upperPath, workPath, context->root)) {
     obLogE("Cannot mount overlay");
-    return false;
+    result = false;
   }
 
-  return true;
+  layerItem = topLayer;
+  while (layerItem) {
+    ObLayerItem* currentItem = layerItem;
+    layerItem = layerItem->prev;
+    free(currentItem);
+  }
+
+  sdsfree(workPath);
+  sdsfree(repoPath);
+  sdsfree(layersPath);
+  sdsfree(lowerPath);
+  sdsfree(upperPath);
+  return result;
 }
 
 
 bool obInitManagementBindings(ObContext* context)
 {
+  bool result = true;
   ObConfig* config = &context->config;
 
-  char bindedOverlay[OB_PATH_MAX];
-  sprintf(bindedOverlay, "%s/%s", context->root, OB_USER_BINDINGS_DIR);
+  sds bindedOverlay = sdsempty();
+  bindedOverlay = sdscatprintf(bindedOverlay, "%s/%s", context->root, OB_USER_BINDINGS_DIR);
 
   if (!obRbind(context->overbootDir, bindedOverlay)) {
+    sdsfree(bindedOverlay);
     return false;
   }
 
   if (config->bindLayers) {
-    char layersDir[OB_PATH_MAX];
-    char bindedLayersDir[OB_PATH_MAX];
+    sds repoPath = obGetRepoPath(context);
 
-    //TODO: use sds
-    char repoPath[OB_PATH_MAX];
-    sprintf(repoPath, "%s/%s", context->devMountPoint, config->repository);
+    sds layersDir = sdsnew(repoPath);
+    layersDir = sdscat(layersDir, "/layers");
 
-    sprintf(layersDir, "%s/layers", repoPath);
-    sprintf(bindedLayersDir, "%s/layers", bindedOverlay);
+    sds bindedLayersDir = sdsnew(bindedOverlay);
+    bindedLayersDir = sdscat(bindedLayersDir, "/layers");
 
     obMkpath(layersDir, OB_MKPATH_MODE);
     obMkpath(bindedLayersDir, OB_MKPATH_MODE);
     if (!obRbind(layersDir, bindedLayersDir)) {
-      return false;
+      result = false;
     }
+
+    sdsfree(repoPath);
+    sdsfree(layersDir);
+    sdsfree(bindedLayersDir);
   }
 
-  return true;
+  sdsfree(bindedOverlay);
+  return result;
 }
 
 
 bool obInitFstab(ObContext* context)
 {
-  ObConfig* config = &context->config;
-  char mtabPath[OB_PATH_MAX];
-  sprintf(mtabPath, "%s/etc/mtab", config->prefix);
+  sds mtabPath = sdsnew(context->config.prefix);
+  mtabPath = sdscat(mtabPath, "/etc/mtab");
+  bool result = updateFstab(context->root, mtabPath) == 0;
 
-  return updateFstab(context->root, mtabPath) == 0;
+  sdsfree(mtabPath);
+  return result;
 }
 
 
 bool obInitDurables(ObContext* context)
 {
+  bool result = true;
   ObConfig* config = &context->config;
   ObDurable* durable = config->durable;
+  sds repoPath = obGetRepoPath(context);
 
-  while (durable != NULL) {
-    char persistentPath[OB_PATH_MAX];
-    char bindPath[OB_PATH_MAX];
+  while (durable != NULL && result == true) {
 
-    //TODO: use sds
-    char repoPath[OB_PATH_MAX];
-    sprintf(repoPath, "%s/%s", context->devMountPoint, config->repository);
+    sds persistentPath = sdsempty();
+    persistentPath = sdscatprintf(persistentPath, "%s/%s%s", repoPath, OB_DURABLES_DIR_NAME, durable->path);
 
-    sprintf(persistentPath, "%s/%s%s", repoPath, OB_DURABLES_DIR_NAME, durable->path);
-    sprintf(bindPath, "%s%s", context->root, durable->path);
+    sds bindPath = sdsnew(context->root);
+    bindPath = sdscat(bindPath, durable->path);
 
     if (!obExists(bindPath)) {
       obMkpath(bindPath, OB_MKPATH_MODE);
@@ -272,11 +316,15 @@ bool obInitDurables(ObContext* context)
 
     obLogI("Binding durable: %s to %s", persistentPath, bindPath);
     if (!obRbind(persistentPath, bindPath)) {
-      return false;
+      result = false;
     }
     durable = durable->next;
+
+    sdsfree(persistentPath);
+    sdsfree(bindPath);
   }
 
-  return true;
+  sdsfree(repoPath);
+  return result;
 }
 
