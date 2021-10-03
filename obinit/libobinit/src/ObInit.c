@@ -6,57 +6,15 @@
 #include "ob/ObInit.h"
 #include "ob/ObMount.h"
 #include "ob/ObOsUtils.h"
-#include "ob/ObLayerInfo.h"
 #include "ob/ObLogging.h"
-#include "ob/ObYamlLayerReader.h" // TODO: move
 #include "ObFstab.h"
+#include "obLayerCollector.h"
 #include "sds.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-
-
-struct ObLayerItem;
-typedef struct ObLayerItem
-{
-  char layerPath[OB_PATH_MAX];
-  struct ObLayerItem* prev;
-} ObLayerItem;
-
-static bool isRootLayer(const char* layerName)
-{
-  return strcmp(OB_UNDERLAYER_ROOT, layerName) == 0
-      || strcmp("", layerName) == 0;
-}
-
-static bool isEndLayer(const char* layerName)
-{
-  return strcmp(OB_UNDERLAYER_NONE, layerName) == 0;
-}
-
-static ObLayerItem* obCollectLayers(const char* layersDir, const char* layerName,
-                             const char* lowerPath, uint8_t* count)
-{
-  ObLayerItem* item = NULL;
-
-  if (isRootLayer(layerName)) {
-    item = calloc(1, sizeof(ObLayerItem));
-    strcpy(item->layerPath, lowerPath);
-    *count += 1;
-  }
-  else if (!isEndLayer(layerName)) {
-    ObLayerInfo info;
-    if (obLoadLayerInfo(layersDir, layerName, &info)) {
-      item = calloc(1, sizeof(ObLayerItem));
-      strcpy(item->layerPath, info.rootPath);
-      item->prev = obCollectLayers(layersDir, info.underlayer, lowerPath, count);
-      *count += 1;
-    }
-  }
-  return item;
-}
 
 static sds obGetUpperPath(const ObContext* context)
 {
@@ -261,7 +219,7 @@ bool obInitFstab(ObContext* context)
 {
   sds mtabPath = sdsnew(context->config.prefix);
   mtabPath = sdscat(mtabPath, "/etc/mtab");
-  bool result = updateFstab(context->root, mtabPath) == 0;
+  bool result = obUpdateFstab(context->root, mtabPath) == 0;
 
   sdsfree(mtabPath);
   return result;

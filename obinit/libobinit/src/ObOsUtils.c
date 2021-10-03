@@ -123,6 +123,9 @@ int obMkpath(const char* path, mode_t mode)
   }
 
   free(origPath);
+  if (status != 0) {
+    obLogE("Cannot create path %s" , path);
+  }
   return status;
 }
 

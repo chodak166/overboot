@@ -20,11 +20,45 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-//TODO: add info logs
+static bool obMountBlockDevice(const char* device, const char* mountPoint)
+{
+  int result = mount(device, mountPoint,
+                 OB_DEV_IMAGE_FS, OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS);
+  if (result != 0) {
+    obLogE("Cannot mount %s in %s: %s",
+           device, mountPoint, strerror(errno));
+    return false;
+  }
+  return true;
+}
 
-//TODO: split it
+static bool obMountImageFile(const char* device, const char* mountPoint)
+{
+  char loopDevice[OB_DEV_PATH_MAX];
+  int loopDeviceFd = obMountLoopDevice(device, loopDevice);
+
+  if (loopDeviceFd < 0) {
+    obLogE("Loop device mount failed");
+    return false;
+  }
+
+  if (mount(loopDevice, mountPoint, OB_DEV_IMAGE_FS,
+            OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS) < 0) {
+      obLogE("Mounting %s in %s failed with error: %s",
+             loopDevice, mountPoint, strerror(errno));
+  }
+
+  obFreeLoopDevice(loopDeviceFd);
+  return true;
+}
+
+
+
+// --------- public API ---------- //
+
 bool obMountDevice(const char* device, const char* mountPoint)
 {
+  obLogI("Mounting device %s in %s", device, mountPoint);
   int result = obMkpath(mountPoint, OB_DEV_MOUNT_MODE);
   if (result != 0) {
     obLogE("Cannot create %s: %s", mountPoint, strerror(errno));
@@ -41,37 +75,16 @@ bool obMountDevice(const char* device, const char* mountPoint)
   }
 
   if (S_ISBLK(devStat.st_mode)) {
-    obLogI("%s is a block device", device);
-    result = mount(device, mountPoint,
-                   OB_DEV_IMAGE_FS, OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS);
-    if (result != 0) {
-      obLogE("Cannot mount %s in %s: %s",
-             device, mountPoint, strerror(errno));
-      return false;
-    }
-
+    obLogI("%s identified as a block device", device);
+    return obMountBlockDevice(device, mountPoint);
   }
   else if (S_ISREG(devStat.st_mode)){
-    obLogI("%s is a regular file", device);
-
-    char loopDevice[OB_DEV_PATH_MAX];
-    int loopDeviceFd = obMountLoopDevice(device, loopDevice);
-
-    if (loopDeviceFd < 0) {
-      obLogE("Loop device mount failed");
-      return false;
-    }
-
-    if (mount(loopDevice, mountPoint, OB_DEV_IMAGE_FS,
-              OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS) < 0) {
-        obLogE("Mounting %s in %s failed with error: %s",
-               loopDevice, mountPoint, strerror(errno));
-    }
-
-    obFreeLoopDevice(loopDeviceFd);
+    obLogI("%s identifed as a regular file", device);
+    return obMountImageFile(device, mountPoint);
   }
 
-  return true;
+  obLogE("Device type not supported");
+  return false;
 }
 
 bool obUnmount(const char* path)
@@ -91,12 +104,12 @@ bool obUnmountDevice(const char* mountPoint)
 
 bool obRbind(const char* srcPath, const char* dstPath)
 {
+  obLogI("Binding %s to %s", srcPath, dstPath);
   if (!obExists(dstPath) && obMkpath(dstPath, OB_DEV_MOUNT_MODE) != 0) {
     return false;
   }
 
-  obLogI("Binding %s to %s", srcPath, dstPath);
-  int result = mount(srcPath, dstPath, NULL, MS_BIND | MS_REC, "");
+  int result = mount(srcPath, dstPath, "", MS_BIND | MS_REC, "");
   if (result != 0) {
     obLogE("Cannot bind %s: %s", srcPath, strerror(errno));
     return false;
@@ -107,11 +120,12 @@ bool obRbind(const char* srcPath, const char* dstPath)
 
 bool obMove(const char* srcPath, const char* dstPath)
 {
+  obLogI("Moving %s to %s", srcPath, dstPath);
   if (obMkpath(dstPath, OB_DEV_MOUNT_MODE) != 0) {
     return false;
   }
 
-  int result = mount(srcPath, dstPath, NULL, MS_MOVE, "");
+  int result = mount(srcPath, dstPath, "", MS_MOVE, "");
   if (result != 0) {
     obLogE("Cannot move %s to %s: %s", srcPath, dstPath, strerror(errno));
     return false;
@@ -122,6 +136,7 @@ bool obMove(const char* srcPath, const char* dstPath)
 
 bool obMountTmpfs(const char* path, const char* sizeStr)
 {
+  obLogI("Mounting %s as tmpfs of size %s", path, sizeStr);
   if (obMkpath(path, OB_DEV_MOUNT_MODE) != 0) {
     return false;
   }
@@ -200,12 +215,10 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
   sprintf(options, "lowerdir=%s,upperdir=%s,workdir=%s", lowerLayers, upper, work);
 
   if (obMkpath(mountPoint, OB_DEV_MOUNT_MODE) != 0) {
-    obLogE("Cannot create overlay mount point path (%s)", mountPoint);
     return false;
   }
 
   if (obMkpath(work, OB_DEV_MOUNT_MODE) != 0) {
-    obLogE("Cannot create overlay work path (%s)", work);
     return false;
   }
 
@@ -221,22 +234,31 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
   return result == 0;
 }
 
-//TODO check mkpath status
 bool obPrepareOverlay(const char* overlayDir, const char* tmpfsSize)
 {
-  //TODO sds
-  obMkpath(overlayDir, OB_MKPATH_MODE);
-  obMountTmpfs(overlayDir, tmpfsSize);
+  if (obMkpath(overlayDir, OB_MKPATH_MODE) != 0) {
+    return false;
+  }
+
+  if (!obMountTmpfs(overlayDir, tmpfsSize)) {
+    return false;
+  }
 
   char path[OB_DEV_PATH_MAX];
   sprintf(path, "%s/work", overlayDir);
-  obMkpath(path, OB_MKPATH_MODE);
+  if (!obMkpath(path, OB_MKPATH_MODE)) {
+    return false;
+  }
 
   sprintf(path, "%s/lower", overlayDir);
-  obMkpath(path, OB_MKPATH_MODE);
+  if (!obMkpath(path, OB_MKPATH_MODE)) {
+    return false;
+  }
 
   sprintf(path, "%s/upper", overlayDir);
-  obMkpath(path, OB_MKPATH_MODE);
+  if (!obMkpath(path, OB_MKPATH_MODE)) {
+    return false;
+  }
 
   return true;
 }

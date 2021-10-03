@@ -51,6 +51,6 @@ bool obFindDevice(ObContext* context);
 /**
  * @brief Dump given context to stdout/kmsg
  */
-void logObContext(const ObContext* context);
+void obLogObContext(const ObContext* context);
 
 #endif // OBCONTEXT_H

@@ -42,6 +42,7 @@ int main(int argc, char* argv[])
   ObContext* context = obCreateObContext(options.rootPrefix);
   ObConfig* config = &context->config;
   obLoadYamlConfig(config, options.configFile);
+  obLogObContext(context);
 
   obInitPersistentDevice(context);
   obInitOverbootDir(context);

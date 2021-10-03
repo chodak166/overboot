@@ -83,7 +83,7 @@ bool obFindDevice(ObContext* context)
 {
   ObConfig* config = &context->config;
   bool result = true;
-  //TODO: consider allowing using directory as device
+
   if (!obIsValidDevice(config->devicePath)) {
     char newPath[OB_DEV_PATH_MAX];
     strcpy(newPath, config->prefix);
@@ -103,7 +103,7 @@ bool obFindDevice(ObContext* context)
   return result;
 }
 
-void logObContext(const ObContext* context)
+void obLogObContext(const ObContext* context)
 {
   const ObConfig* config = &context->config;
   obLogI("enabled: %i", config->enabled);

@@ -16,6 +16,7 @@ add_library(${TARGET} STATIC
   src/ObConfig.c
   src/ObInit.c
   src/ObFstab.c
+  src/obLayerCollector.c
 
   extern/sds/sds.c
   )

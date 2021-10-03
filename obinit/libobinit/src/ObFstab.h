@@ -6,6 +6,6 @@
 #ifndef OBFSTAB_H
 #define OBFSTAB_H
 
-int updateFstab(const char* rootmnt, const char* mtabPath);
+int obUpdateFstab(const char* rootmnt, const char* mtabPath);
 
 #endif // OBFSTAB_H

@@ -22,7 +22,6 @@ static void obCountDurablesRecursive(ObDurable* durable, int* count)
 void obAddDurable(ObConfig* config, const char* path, bool copyOrigin)
 {
   ObDurable* durable = malloc(sizeof(ObDurable));
-  //TODO
   strcpy(durable->path, path);
   durable->copyOrigin = copyOrigin;
   durable->next = config->durable;

@@ -236,7 +236,7 @@ teardown()
 
 @test "obinit should not leave any memory leaks'" {
   if command -v valgrind &>/dev/null; then
-      valgrind -q --error-exitcode=1 \
+      valgrind -q --leak-check=full --track-origins=yes --error-exitcode=1 \
    $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
   fi
 }
