@@ -39,19 +39,41 @@ int main(int argc, char* argv[])
     exit(options.exitStatus);
   }
 
+  int exitCode = EXIT_SUCCESS;
+
   ObContext* context = obCreateObContext(options.rootPrefix);
   ObConfig* config = &context->config;
   obLoadYamlConfig(config, options.configFile);
   obLogObContext(context);
 
-  obInitPersistentDevice(context);
-  obInitOverbootDir(context);
-  obInitLowerRoot(context);
-  obInitOverlayfs(context);
-  obInitManagementBindings(context);
-  obInitFstab(context);
-  obInitDurables(context);
+  if (!obInitPersistentDevice(context)) {
+    exitCode = EXIT_FAILURE;
+  }
+  else if(!obInitOverbootDir(context)) {
+    exitCode = EXIT_FAILURE;
+  }
+
+  else if(!obInitLowerRoot(context)) {
+    exitCode = EXIT_FAILURE;
+  }
+
+  else if(!obInitOverlayfs(context)) {
+    exitCode = EXIT_FAILURE;
+  }
+
+  else if(!obInitManagementBindings(context)) {
+    exitCode = EXIT_FAILURE;
+  }
+
+  else if(!obInitFstab(context)) {
+    exitCode = EXIT_FAILURE;
+  }
+
+  else if(!obInitDurables(context)) {
+    exitCode = EXIT_FAILURE;
+  }
 
   obFreeObContext(&context);
-  return 0;
+  obLogI("Overboot initialization sequence finished with exit code %i", exitCode);
+  return exitCode;
 }

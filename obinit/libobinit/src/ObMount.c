@@ -59,16 +59,15 @@ static bool obMountImageFile(const char* device, const char* mountPoint)
 bool obMountDevice(const char* device, const char* mountPoint)
 {
   obLogI("Mounting device %s in %s", device, mountPoint);
-  int result = obMkpath(mountPoint, OB_DEV_MOUNT_MODE);
-  if (result != 0) {
-    obLogE("Cannot create %s: %s", mountPoint, strerror(errno));
+
+  if (!obMkpath(mountPoint, OB_DEV_MOUNT_MODE)) {
     return false;
   }
 
   obLogI("Directory %s created", mountPoint);
 
   struct stat devStat;
-  result = lstat(device, &devStat);
+  int result = lstat(device, &devStat);
   if (result != 0) {
     obLogE("Cannot stat %s: %s", device, strerror(errno));
     return false;
@@ -105,7 +104,7 @@ bool obUnmountDevice(const char* mountPoint)
 bool obRbind(const char* srcPath, const char* dstPath)
 {
   obLogI("Binding %s to %s", srcPath, dstPath);
-  if (!obExists(dstPath) && obMkpath(dstPath, OB_DEV_MOUNT_MODE) != 0) {
+  if (!obExists(dstPath) && !obMkpath(dstPath, OB_DEV_MOUNT_MODE)) {
     return false;
   }
 
@@ -121,7 +120,7 @@ bool obRbind(const char* srcPath, const char* dstPath)
 bool obMove(const char* srcPath, const char* dstPath)
 {
   obLogI("Moving %s to %s", srcPath, dstPath);
-  if (obMkpath(dstPath, OB_DEV_MOUNT_MODE) != 0) {
+  if (!obMkpath(dstPath, OB_DEV_MOUNT_MODE)) {
     return false;
   }
 
@@ -137,7 +136,7 @@ bool obMove(const char* srcPath, const char* dstPath)
 bool obMountTmpfs(const char* path, const char* sizeStr)
 {
   obLogI("Mounting %s as tmpfs of size %s", path, sizeStr);
-  if (obMkpath(path, OB_DEV_MOUNT_MODE) != 0) {
+  if (!obMkpath(path, OB_DEV_MOUNT_MODE)) {
     return false;
   }
 
@@ -214,11 +213,11 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
   char options[OB_DEV_PATH_MAX * (layerCount+2)];
   sprintf(options, "lowerdir=%s,upperdir=%s,workdir=%s", lowerLayers, upper, work);
 
-  if (obMkpath(mountPoint, OB_DEV_MOUNT_MODE) != 0) {
+  if (!obMkpath(mountPoint, OB_DEV_MOUNT_MODE)) {
     return false;
   }
 
-  if (obMkpath(work, OB_DEV_MOUNT_MODE) != 0) {
+  if (!obMkpath(work, OB_DEV_MOUNT_MODE)) {
     return false;
   }
 
@@ -236,7 +235,7 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
 
 bool obPrepareOverlay(const char* overlayDir, const char* tmpfsSize)
 {
-  if (obMkpath(overlayDir, OB_MKPATH_MODE) != 0) {
+  if (!obMkpath(overlayDir, OB_MKPATH_MODE)) {
     return false;
   }
 

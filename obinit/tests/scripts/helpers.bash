@@ -77,6 +77,9 @@ test_setupFakeRamfsRoot()
   cp -v "$TEST_RES_DIR/fstab" "$TEST_ROOTMNT_DIR/etc/fstab"
   cp "$TEST_RES_DIR/fstab-parsed" "$TEST_TMP_DIR/"
   cp "$TEST_RES_DIR/mtab" "$TEST_RAMFS_DIR/etc/mtab"
+
+  ESCAPED_ROOTMNT_DIR=$(sed 's/[&/\]/\\&/g' <<<"$TEST_ROOTMNT_DIR")
+  sed -i "s/%rootmnt%/$ESCAPED_ROOTMNT_DIR/g" "$TEST_RAMFS_DIR/etc/mtab"
 }
 
 test_mountRootmnt()

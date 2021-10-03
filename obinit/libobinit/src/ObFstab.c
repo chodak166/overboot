@@ -19,7 +19,7 @@ static bool isWhiteChar(char c) {
 
 static int getNthColumn(char* buffer, const char* line, ssize_t size, int n)
 {
-  uint8_t column = -1;
+  int8_t column = -1;
   int16_t pos = 0;
   int16_t initPos = -1;
 
@@ -111,7 +111,7 @@ static void rewriteFstab(FILE* origFile, FILE* file, const char* mtabEntry)
   }
 }
 
-static int updateFstabWithMtabEntry(const char* fstabPath,
+static bool updateFstabWithMtabEntry(const char* fstabPath,
                              const char* mtabEntry)
 {
   sds fstabPathOrig = sdsnew(fstabPath);
@@ -125,14 +125,14 @@ static int updateFstabWithMtabEntry(const char* fstabPath,
   if (origFile == NULL) {
     obLogE("Cannot open %s: %s", fstabPathOrig, strerror(errno));
     sdsfree(fstabPathOrig);
-    return 1;
+    return false;
   }
 
   file = fopen(fstabPath, "w");
   if (file == NULL) {
     obLogE("Cannot open %s: %s", fstabPath, strerror(errno));
     sdsfree(fstabPathOrig);
-    return 1;
+    return false;
   }
   sdsfree(fstabPathOrig);
 
@@ -141,23 +141,26 @@ static int updateFstabWithMtabEntry(const char* fstabPath,
   fclose(origFile);
   fclose(file);
 
-  return 0;
+  return true;
 }
 
 
 // --------- public API ---------- //
 
-int obUpdateFstab(const char* rootmnt, const char* mtabPath)
+bool obUpdateFstab(const char* rootmnt, const char* mtabPath)
 {
   sds fstabPath = sdsnew(rootmnt);
   fstabPath = sdscat(fstabPath, "/etc/fstab");
 
   obLogI("Updating fstab (%s)", fstabPath);
 
-  int result = 1;
+  bool result = false;
   char rootMtabEntry[OB_PATH_MAX] = {0};
   if (getRootMtabEntry(rootMtabEntry, mtabPath, rootmnt)) {
     result = updateFstabWithMtabEntry(fstabPath, rootMtabEntry);
+  }
+  else {
+    obLogW("Root entry (%s) not found in %s", rootMtabEntry, mtabPath);
   }
 
   sdsfree(fstabPath);

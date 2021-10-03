@@ -28,8 +28,8 @@
 #define TEST_CONTENT "sync test content"
 
 char treePath[OB_PATH_MAX] = {0};
-char srcPath[OB_CPATH_MAX] = {0};
-char dstPath[OB_CPATH_MAX] = {0};
+char srcPath[OB_PATH_MAX] = {0};
+char dstPath[OB_PATH_MAX] = {0};
 
 void helper_setupSrcTree()
 {
@@ -85,7 +85,7 @@ void test_obSync_shouldRecreateDirectoriesRecursively()
 {
   obSync(srcPath, dstPath);
 
-  char testPath[OB_PATH_MAX];
+  char testPath[OB_CPATH_MAX];
   sprintf(testPath, "%s/%s", dstPath, TEST_DIR_1);
   TEST_ASSERT_TRUE(obExists(testPath));
   sprintf(testPath, "%s/%s", dstPath, TEST_DIR_2);
@@ -101,7 +101,7 @@ void test_obSync_shouldCopyFiles()
 {
   obSync(srcPath, dstPath);
 
-  char testPath[OB_PATH_MAX];
+  char testPath[OB_CPATH_MAX];
   sprintf(testPath, "%s/%s", dstPath, TEST_FILE_1);
   TEST_ASSERT_TRUE(obExists(testPath));
 }
@@ -110,7 +110,7 @@ void test_obSync_shouldCopySymbolicLinks()
 {
   obSync(srcPath, dstPath);
 
-  char testPath[OB_PATH_MAX];
+  char testPath[OB_CPATH_MAX];
   sprintf(testPath, "%s/%s", dstPath, TEST_LINK_1);
   struct stat buf;
   lstat(testPath, &buf);

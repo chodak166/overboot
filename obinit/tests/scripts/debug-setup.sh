@@ -19,6 +19,8 @@ set +e
 
 test_setupFakeRamfsRoot
 
+cp -v /etc/mtab $TEST_RAMFS_DIR/etc/mtab
+
 if command -v tree &>/dev/null; then
   tree $TEST_TMP_DIR
 fi

@@ -70,15 +70,22 @@ static int obSyncCb(const char* path, const struct stat* sbuf, int type, struct 
   strcat(toPath, path + strlen(syncSrcDir));
 
   if (type == FTW_D) {
-    obMkpath(toPath, OB_MKPATH_MODE);
+    if (!obMkpath(toPath, OB_MKPATH_MODE)) {
+      return 1;
+    }
   }
   else if (type == FTW_F) {
-    obCopyFile(path, toPath);
+    if (!obCopyFile(path, toPath)) {
+      return 1;
+    }
   }
   else if (type == FTW_SL) {
     char linkTarget[OB_PATH_MAX] = {0};
     readlink(path, linkTarget, OB_PATH_MAX);
-    symlink(linkTarget, toPath);
+    if (symlink(linkTarget, toPath) != 0) {
+      obLogE("Cannot create symlink %s -> %s", path, linkTarget);
+      return 1;
+    }
   }
   else {
     obLogE("Type %i not supported (%s)", type, path);
@@ -95,7 +102,7 @@ static bool obEnsureParentExists(const char* path)
 
   if (!obExists(parentDir)) {
     obLogI("Parent dir does not exists, creating %s", parentDir);
-    return obMkpath(parentDir, OB_MKPATH_MODE) == 0;
+    return obMkpath(parentDir, OB_MKPATH_MODE);
   }
   return true;
 }
@@ -103,7 +110,7 @@ static bool obEnsureParentExists(const char* path)
 
 // --------- public API ---------- //
 
-int obMkpath(const char* path, mode_t mode)
+bool obMkpath(const char* path, mode_t mode)
 {
   char* origPath = strdup(path);
   int status = 0;
@@ -124,9 +131,10 @@ int obMkpath(const char* path, mode_t mode)
 
   free(origPath);
   if (status != 0) {
-    obLogE("Cannot create path %s" , path);
+    obLogE("Cannot create path %s (%s)" , path, strerror(errno));
+    return false;
   }
-  return status;
+  return true;
 }
 
 bool obExists(const char* path)

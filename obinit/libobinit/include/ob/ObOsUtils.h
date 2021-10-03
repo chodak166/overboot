@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
-int obMkpath(const char *path, mode_t mode);
+bool obMkpath(const char *path, mode_t mode);
 bool obExists(const char* path);
 bool obIsFile(const char* path);
 bool obIsBlockDevice(const char* path);
