@@ -65,6 +65,7 @@ static bool obPreparePersistentUpperDir(const ObContext* context, sds upperPath)
   if (config->clearUpper) {
     obLogI("Clearing upper directory (%s)", upperPath);
     if (!obRemoveDirR(upperPath)) {
+      obLogE("Clearing upper directory failed");
       result = false;
     }
     else if (!obMkpath(upperPath, OB_MKPATH_MODE)) {

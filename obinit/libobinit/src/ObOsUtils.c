@@ -180,6 +180,9 @@ bool obIsDirectory(const char* path)
 
 bool obRemoveDirR(const char* path)
 {
+  if (!obExists(path)) {
+    return true;
+  }
   return nftw(path, obRmPath, 10, FTW_DEPTH | FTW_MOUNT | FTW_PHYS) >= 0;
 }
 

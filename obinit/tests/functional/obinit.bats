@@ -256,6 +256,19 @@ tree $TEST_TMP_DIR/..
   fi
 }
 
+# @test "obinit should use include_dir field and read all config files inside given directory" {
+#   $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-include.yaml"
+
+#   testFileName1="${RANDOM}-$(date +%s).test"
+#   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName1"
+  
+#   testFileName2="${RANDOM}-$(date +%s).test"
+#   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2/$testFileName2"
+  
+#   [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_1/$testFileName1" ]
+#   [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_2/$testFileName2" ]
+# }
+
 # @test "obinit restore original rootmnt after failure" {
 #  skip
 # }
