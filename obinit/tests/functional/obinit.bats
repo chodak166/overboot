@@ -249,25 +249,26 @@ tree $TEST_TMP_DIR/..
   [ ! -f "TEST_OB_CONFIG_PATH" ]
 }
 
+
+@test "obinit should use config_dir field and read all config files inside given directory" {
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-include.yaml"
+
+  testFileName1="${RANDOM}-$(date +%s).test"
+  touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName1"
+  
+  testFileName2="${RANDOM}-$(date +%s).test"
+  touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2/$testFileName2"
+  
+  [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_1/$testFileName1" ]
+  [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_2/$testFileName2" ]
+}
+
 @test "obinit should not leave any memory leaks'" {
   if command -v valgrind &>/dev/null; then
       valgrind -q --leak-check=full --track-origins=yes --error-exitcode=1 \
    $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
   fi
 }
-
-# @test "obinit should use include_dir field and read all config files inside given directory" {
-#   $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-include.yaml"
-
-#   testFileName1="${RANDOM}-$(date +%s).test"
-#   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName1"
-  
-#   testFileName2="${RANDOM}-$(date +%s).test"
-#   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2/$testFileName2"
-  
-#   [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_1/$testFileName1" ]
-#   [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_2/$testFileName2" ]
-# }
 
 # @test "obinit restore original rootmnt after failure" {
 #  skip

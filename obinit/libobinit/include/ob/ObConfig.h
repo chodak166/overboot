@@ -24,6 +24,7 @@ typedef struct ObConfig
 
   char headLayer[OB_NAME_MAX];
   char repository[OB_PATH_MAX];
+  char configDir[OB_PATH_MAX];
   char tmpfsSize[16];
 
   bool enabled;

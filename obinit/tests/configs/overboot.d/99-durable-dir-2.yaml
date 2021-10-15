@@ -1,0 +1,3 @@
+durables:
+    - path: "/test/durables-dir-2"
+      copy_origin: true

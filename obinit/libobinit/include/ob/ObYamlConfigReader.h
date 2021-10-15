@@ -6,8 +6,10 @@
 #ifndef OBYAMLCONFIGREADER_H
 #define OBYAMLCONFIGREADER_H
 
+#include <stdbool.h>
+
 typedef struct ObConfig ObConfig;
 
-void obLoadYamlConfig(ObConfig* config, const char* path);
+bool obLoadYamlConfig(ObConfig* config, const char* path);
 
 #endif // OBYAMLCONFIGREADER_H
