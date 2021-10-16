@@ -262,7 +262,8 @@ teardown()
 }
 
 @test "obinit restore original rootmnt after rollback" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-rollback.yaml"
+  obFailed=false
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-rollback.yaml" || obFailed=true
 
   [ -f "$TEST_ROOTMNT_DIR/etc/fstab" ]
 
@@ -271,6 +272,7 @@ teardown()
   tmpInMount=1
   mount | grep -q "$TEST_TMP_DIR" || tmpInMount=0
 
+  [ $obFailed = true ]
   [ $tmpInMount -eq 0 ]
   [ ! -d "$TEST_OB_OVERLAY_DIR" ]
   [ ! -d "$TEST_OB_DEVICE_MNT_PATH" ]

@@ -4,18 +4,11 @@
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
 #include "ObArgParser.h"
-#include "ob/ObContext.h"
+#include "ob/ObInitTasks.h"
 #include "ob/ObLogging.h"
-#include "ob/ObMount.h"
-#include "ob/ObOsUtils.h"
 #include "ob/ObYamlConfigReader.h"
-#include "ob/ObInit.h"
-#include "ob/ObDeinit.h"
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <errno.h>
 
 #ifdef OB_LOG_STDOUT
 # define OB_LOG_USE_STD true
@@ -40,51 +33,19 @@ int main(int argc, char* argv[])
     exit(options.exitStatus);
   }
 
-  int exitCode = EXIT_SUCCESS;
 
   ObContext* context = obCreateObContext(options.rootPrefix);
   ObConfig* config = &context->config;
   obLoadYamlConfig(config, options.configFile);
   obLogObContext(context);
 
-  if (!obInitPersistentDevice(context)) {
+  int exitCode = EXIT_SUCCESS;
+  if (!obExecObInitTasks(context)) {
     exitCode = EXIT_FAILURE;
-  }
-  else if(!obInitOverbootDir(context)) {
-    exitCode = EXIT_FAILURE;
-  }
-
-  else if(!obInitLowerRoot(context)) {
-    exitCode = EXIT_FAILURE;
-  }
-
-  else if(!obInitOverlayfs(context)) {
-    exitCode = EXIT_FAILURE;
-  }
-
-  else if(!obInitManagementBindings(context)) {
-    exitCode = EXIT_FAILURE;
-  }
-
-  else if(!obInitFstab(context)) {
-    exitCode = EXIT_FAILURE;
-  }
-
-  else if(!obInitDurables(context)) {
-    exitCode = EXIT_FAILURE;
-  }
-
-  if (context->config.rollback) {
-    obDeinitDurables(context);
-    obDeinitFstab(context);
-    obDeinitManagementBindings(context);
-    obDeinitOverlayfs(context);
-    obDeinitLowerRoot(context);
-    obDeinitOverbootDir(context);
-    obDeinitPersistentDevice(context);
   }
 
   obFreeObContext(&context);
+
   obLogI("Overboot initialization sequence finished with exit code %i", exitCode);
   return exitCode;
 }
