@@ -233,31 +233,3 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
   return result == 0;
 }
 
-
-//TODO: move
-bool obPrepareOverlay(const char* overlayDir, const char* tmpfsSize)
-{
-  if (!obMountTmpfs(overlayDir, tmpfsSize)) {
-    return false;
-  }
-
-  //TODO: use sds?
-  //TODO: define dirnames in one place
-  char path[OB_DEV_PATH_MAX];
-  sprintf(path, "%s/work", overlayDir);
-  if (!obMkpath(path, OB_MKPATH_MODE)) {
-    return false;
-  }
-
-  sprintf(path, "%s/lower-root", overlayDir);
-  if (!obMkpath(path, OB_MKPATH_MODE)) {
-    return false;
-  }
-
-  sprintf(path, "%s/upper", overlayDir);
-  if (!obMkpath(path, OB_MKPATH_MODE)) {
-    return false;
-  }
-
-  return true;
-}

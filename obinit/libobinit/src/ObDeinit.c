@@ -5,6 +5,7 @@
 
 #include "ob/ObDeinit.h"
 #include "ob/ObMount.h"
+#include "ObPaths.h"
 
 #include <sds.h>
 #include <unistd.h>
@@ -23,30 +24,31 @@ bool obDeinitPersistentDevice(ObContext* context)
 
 bool obDeinitOverbootDir(ObContext* context)
 {
-  //TODO: use sds?
-
-  char path[OB_DEV_PATH_MAX];
-  sprintf(path, "%s/work", context->overbootDir);
+  sds path = obGetOverlayWorkPath(context);
   bool result = rmdir(path) == 0;
 
-  sprintf(path, "%s/lower-root", context->overbootDir);
+  sdsfree(path);
+  path = obGetLowerRootPath(context);
   result = rmdir(path) == 0 && result;
 
-  sprintf(path, "%s/upper", context->overbootDir);
+  sdsfree(path);
+  path = obGetBindedUpperPath(context);
   result = rmdir(path) == 0 && result;
 
   result = obUnmount(context->overbootDir) && result;
   result = rmdir(context->overbootDir) == 0 && result;
+
+  sdsfree(path);
   return result;
 }
 
 
 bool obDeinitLowerRoot(ObContext* context)
 {
-  //TODO: use obGetLowerRootPath
-  char path[OB_DEV_PATH_MAX];
-  sprintf(path, "%s/lower-root", context->overbootDir);
-  return obMove(path, context->root);
+  sds path = obGetLowerRootPath(context);
+  bool result = obMove(path, context->root);
+  sdsfree(path);
+  return result;
 }
 
 
@@ -58,13 +60,8 @@ bool obDeinitOverlayfs(ObContext* context)
 
 bool obDeinitManagementBindings(ObContext* context)
 {
-  //TODO: move to a common function
-  sds bindedOverlay = sdsempty();
-  bindedOverlay = sdscatprintf(bindedOverlay, "%s/%s", context->root, OB_USER_BINDINGS_DIR);
-
-  //TODO: move to a common function
-  sds bindedLayersDir = sdsnew(bindedOverlay);
-  bindedLayersDir = sdscat(bindedLayersDir, "/layers");
+  sds bindedOverlay = obGetBindedOverlayPath(context);
+  sds bindedLayersDir = obGetBindedLayersPath(context);
 
   bool result = obUnmount(bindedLayersDir);
   result = rmdir(bindedLayersDir) && result;
@@ -79,12 +76,8 @@ bool obDeinitManagementBindings(ObContext* context)
 
 bool obDeinitFstab(ObContext* context)
 {
-  //TODO: move to a common function
-  sds fstabPath = sdsnew(context->root);
-  fstabPath = sdscat(fstabPath, "/etc/fstab");
-
-  sds origFstabPath = sdsnew(fstabPath);
-  origFstabPath = sdscat(origFstabPath, ".orig");
+  sds fstabPath = obGetRootFstabPath(context->root);
+  sds origFstabPath = obGetRootFstabBackupPath(fstabPath);
 
   bool result = rename(origFstabPath, fstabPath) == 0;
   sdsfree(fstabPath);

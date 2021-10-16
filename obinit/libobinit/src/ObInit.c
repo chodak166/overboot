@@ -8,6 +8,7 @@
 #include "ob/ObOsUtils.h"
 #include "ob/ObLogging.h"
 #include "ObFstab.h"
+#include "ObPaths.h"
 #include "ObLayerCollector.h"
 #include "sds.h"
 
@@ -15,46 +16,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-
-static sds obGetRepoPath(const ObContext* context)
-{
-  sds repoPath = sdsempty();
-  return sdscatprintf(repoPath, "%s/%s", context->devMountPoint, context->config.repository);
-}
-
-static sds obGetLowerRootPath(const ObContext* context)
-{
-  sds lowerPath = sdsnew(context->overbootDir);
-  return sdscat(lowerPath, "/lower-root");
-}
-
-static sds obGetUpperPath(const ObContext* context)
-{
-  sds upperPath = NULL;
-  if (context->config.useTmpfs) {
-    upperPath = sdsnew(context->overbootDir);
-  }
-  else {
-    sds repoPath = obGetRepoPath(context);
-    upperPath = sdsnew(repoPath);
-    sdsfree(repoPath);
-  }
-  return sdscat(upperPath, "/upper");
-}
-
-static sds obGetOverlayWorkPath(const ObContext* context)
-{
-  sds workPath = NULL;
-  if (context->config.useTmpfs) {
-    workPath = sdsnew(context->overbootDir);
-  }
-  else {
-    sds repoPath = obGetRepoPath(context);
-    workPath = sdsnew(repoPath);
-    sdsfree(repoPath);
-  }
-  return sdscat(workPath, "/work");
-}
 
 static bool obPreparePersistentUpperDir(const ObContext* context, sds upperPath)
 {
@@ -83,6 +44,37 @@ static bool obPreparePersistentUpperDir(const ObContext* context, sds upperPath)
 }
 
 
+static bool obPrepareOverlay(const ObContext* context)
+{
+  const ObConfig* config = &context->config;
+  if (!obMountTmpfs(context->overbootDir, config->tmpfsSize)) {
+    return false;
+  }
+
+  sds path = obGetOverlayWorkPath(context);
+  if (!obMkpath(path, OB_MKPATH_MODE)) {
+    sdsfree(path);
+    return false;
+  }
+
+  sdsfree(path);
+  path = obGetLowerRootPath(context);
+  if (!obMkpath(path, OB_MKPATH_MODE)) {
+    sdsfree(path);
+    return false;
+  }
+
+  sdsfree(path);
+  path = obGetUpperPath(context);
+  if (!obMkpath(path, OB_MKPATH_MODE)) {
+    sdsfree(path);
+    return false;
+  }
+
+  sdsfree(path);
+  return true;
+}
+
 // --------- public API ---------- //
 
 
@@ -105,7 +97,7 @@ bool obInitPersistentDevice(ObContext* context)
 bool obInitOverbootDir(ObContext* context)
 {
   ObConfig* config = &context->config;
-  if (!obPrepareOverlay(context->overbootDir, config->tmpfsSize)) {
+  if (!obPrepareOverlay(context)) {
     obLogE("Cannot prepare overboot dir (%s)", context->overbootDir);
     return false;
   }
@@ -201,9 +193,7 @@ bool obInitManagementBindings(ObContext* context)
   bool result = true;
   ObConfig* config = &context->config;
 
-  //TODO: move to a common function
-  sds bindedOverlay = sdsempty();
-  bindedOverlay = sdscatprintf(bindedOverlay, "%s/%s", context->root, OB_USER_BINDINGS_DIR);
+  sds bindedOverlay = obGetBindedOverlayPath(context);
 
   if (!obRbind(context->overbootDir, bindedOverlay)) {
     sdsfree(bindedOverlay);
@@ -216,9 +206,7 @@ bool obInitManagementBindings(ObContext* context)
     sds layersDir = sdsnew(repoPath);
     layersDir = sdscat(layersDir, "/layers");
 
-    //TODO: move to a common function
-    sds bindedLayersDir = sdsnew(bindedOverlay);
-    bindedLayersDir = sdscat(bindedLayersDir, "/layers");
+    sds bindedLayersDir = obGetBindedLayersPath(context);
 
     obMkpath(layersDir, OB_MKPATH_MODE);
     obMkpath(bindedLayersDir, OB_MKPATH_MODE);
@@ -233,8 +221,7 @@ bool obInitManagementBindings(ObContext* context)
 
   if (result && !config->useTmpfs) {
     sds upper = obGetUpperPath(context);
-    sds bindedUpper = sdsnew(bindedOverlay);
-    bindedUpper = sdscat(bindedUpper, "/upper");
+    sds bindedUpper = obGetBindedUpperPath(context);
     if (!obRbind(upper, bindedUpper)) {
         result = false;
     }

@@ -6,6 +6,7 @@
 #include "ObFstab.h"
 #include "ob/ObDefs.h"
 #include "ob/ObLogging.h"
+#include "ObPaths.h"
 #include "sds.h"
 
 #include <stdlib.h>
@@ -114,9 +115,7 @@ static void rewriteFstab(FILE* origFile, FILE* file, const char* mtabEntry)
 static bool updateFstabWithMtabEntry(const char* fstabPath,
                              const char* mtabEntry)
 {
-  //TODO: move to a common function
-  sds fstabPathOrig = sdsnew(fstabPath);
-  fstabPathOrig = sdscat(fstabPathOrig, ".orig");
+  sds fstabPathOrig = obGetRootFstabBackupPath(fstabPath);
   rename(fstabPath, fstabPathOrig);
 
   FILE* origFile = NULL;
@@ -150,8 +149,7 @@ static bool updateFstabWithMtabEntry(const char* fstabPath,
 
 bool obUpdateFstab(const char* rootmnt, const char* mtabPath)
 {
-  sds fstabPath = sdsnew(rootmnt);
-  fstabPath = sdscat(fstabPath, "/etc/fstab");
+  sds fstabPath = obGetRootFstabPath(rootmnt);
 
   obLogI("Updating fstab (%s)", fstabPath);
 

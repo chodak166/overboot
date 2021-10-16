@@ -33,7 +33,6 @@ int main(int argc, char* argv[])
     exit(options.exitStatus);
   }
 
-
   ObContext* context = obCreateObContext(options.rootPrefix);
   ObConfig* config = &context->config;
   obLoadYamlConfig(config, options.configFile);

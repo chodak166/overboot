@@ -6,8 +6,6 @@
 #ifndef OBOSUTILS_H
 #define OBOSUTILS_H
 
-//TODO: move to src
-
 #include <stdbool.h>
 #include <sys/types.h>
 

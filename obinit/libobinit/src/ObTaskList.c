@@ -86,7 +86,7 @@ bool obExecTaskList(ObTaskListPtr taskList)
     bool result = task->exec(task->context);
     if (!result) {
       obCallUndoChain(task);
-      return false; //TODO: use enum
+      return false;
     }
     task = task->next;
   }

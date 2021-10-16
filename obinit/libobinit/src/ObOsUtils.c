@@ -3,9 +3,6 @@
 // See accompanying file LICENSE.txt or copy at
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
-#define _GNU_SOURCE // TODO: move to cmake
-
-
 #include "ob/ObOsUtils.h"
 #include "ob/ObLogging.h"
 #include "ob/ObDefs.h"

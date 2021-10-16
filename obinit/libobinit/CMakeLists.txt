@@ -20,6 +20,7 @@ add_library(${TARGET} STATIC
   src/ObDeinit.c
   src/ObTaskList.c
   src/ObInitTasks.c
+  src/ObPaths.c
 
   extern/sds/sds.c
   )
@@ -30,4 +31,9 @@ target_include_directories(${TARGET}
 
   PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/extern/sds
+  )
+
+target_compile_definitions(${TARGET}
+  PRIVATE
+  -D_GNU_SOURCE
   )

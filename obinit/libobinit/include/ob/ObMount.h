@@ -28,6 +28,4 @@ void obFreeLoopDevice(int deviceFd);
 bool obMountOverlay(char** layers, int layerCount, const char* upper,
                     const char* work, const char* mountPoint);
 
-bool obPrepareOverlay(const char* overlayDir, const char* tmpfsSize);
-
 #endif // OBMOUNT_H
