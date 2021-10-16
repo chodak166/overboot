@@ -31,7 +31,7 @@ typedef struct ObConfig
   bool bindLayers;
   bool useTmpfs;
   bool clearUpper;
-
+  bool rollback;
   ObDurable* durable;
 
 } ObConfig;

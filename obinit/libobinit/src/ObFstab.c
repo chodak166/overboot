@@ -114,6 +114,7 @@ static void rewriteFstab(FILE* origFile, FILE* file, const char* mtabEntry)
 static bool updateFstabWithMtabEntry(const char* fstabPath,
                              const char* mtabEntry)
 {
+  //TODO: move to a common function
   sds fstabPathOrig = sdsnew(fstabPath);
   fstabPathOrig = sdscat(fstabPathOrig, ".orig");
   rename(fstabPath, fstabPathOrig);

@@ -10,6 +10,7 @@
 #include "ob/ObOsUtils.h"
 #include "ob/ObYamlConfigReader.h"
 #include "ob/ObInit.h"
+#include "ob/ObDeinit.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,6 +72,16 @@ int main(int argc, char* argv[])
 
   else if(!obInitDurables(context)) {
     exitCode = EXIT_FAILURE;
+  }
+
+  if (context->config.rollback) {
+    obDeinitDurables(context);
+    obDeinitFstab(context);
+    obDeinitManagementBindings(context);
+    obDeinitOverlayfs(context);
+    obDeinitLowerRoot(context);
+    obDeinitOverbootDir(context);
+    obDeinitPersistentDevice(context);
   }
 
   obFreeObContext(&context);

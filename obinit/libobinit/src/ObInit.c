@@ -77,7 +77,7 @@ static bool obPreparePersistentUpperDir(const ObContext* context, sds upperPath)
   }
 
   if (!result) {
-    obLogE("Binding persistent upper dir failed");
+    obLogE("Preparing persistent upper dir failed");
   }
   return result;
 }
@@ -201,6 +201,7 @@ bool obInitManagementBindings(ObContext* context)
   bool result = true;
   ObConfig* config = &context->config;
 
+  //TODO: move to a common function
   sds bindedOverlay = sdsempty();
   bindedOverlay = sdscatprintf(bindedOverlay, "%s/%s", context->root, OB_USER_BINDINGS_DIR);
 
@@ -215,6 +216,7 @@ bool obInitManagementBindings(ObContext* context)
     sds layersDir = sdsnew(repoPath);
     layersDir = sdscat(layersDir, "/layers");
 
+    //TODO: move to a common function
     sds bindedLayersDir = sdsnew(bindedOverlay);
     bindedLayersDir = sdscat(bindedLayersDir, "/layers");
 

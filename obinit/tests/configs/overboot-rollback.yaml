@@ -1,0 +1,19 @@
+enabled: true
+layers:
+  visible: true
+  device: "/dev/ob_test.img"
+  repository: "overboot"
+  head: "third-test-layer"
+upper:
+  type: "volatile"
+durables:
+    - path: "/test/durables-dir-1"
+      copy_origin: false
+    - path: "/test/durables-dir-2"
+      copy_origin: true
+    - path: "/test/persistent_file_1"
+      copy_origin: false
+    - path: "/test/persistent_file_2"
+      copy_origin: true
+
+rollback: true

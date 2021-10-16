@@ -1,15 +1,14 @@
 #!/bin/bash
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 propagation=$(findmnt -rn -o PROPAGATION /tmp)
 
 if [[ "$propagation" != "private" ]]; then
-    echo -e "Please mark /tmp as private and try again:\n"
-    echo -e "sudo mount --make-private /tmp\n"
-    exit 1
+  echo -e "Please mark /tmp as private and try again:\n"
+  echo -e "sudo mount --make-private /tmp\n"
+  exit 1
 fi
-
 
 TEST_TMP_DIR=/tmp/obinit-debug
 
@@ -24,7 +23,6 @@ cp -v /etc/mtab $TEST_RAMFS_DIR/etc/mtab
 if command -v tree &>/dev/null; then
   tree $TEST_TMP_DIR
 fi
-
 
 echo -e "\nDebug tree ready, use:\n"
 echo -e "obinit -r /tmp/obinit-debug/ramfs\n"

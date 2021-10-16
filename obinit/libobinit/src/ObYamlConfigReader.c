@@ -53,6 +53,9 @@ static void onScalarValue(ObConfig* config, const char* itemPath, const char* va
   else if (strcmp(itemPath, ".config_dir") == 0) {
     strcpy(config->configDir, value);
   }
+  else if (strcmp(itemPath, ".rollback") == 0) {
+    config->rollback = strcmp(value, "true") == 0 ? true : false;
+  }
 }
 
 

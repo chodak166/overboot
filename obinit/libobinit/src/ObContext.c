@@ -42,6 +42,7 @@ void obInitializeObContext(ObContext* context, const char* prefix)
   config->bindLayers = true;
   config->useTmpfs = true;
   config->clearUpper = false;
+  config->rollback = false;
 
   config->durable = NULL;
 

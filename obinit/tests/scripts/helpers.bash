@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # /                              # initramfs root
-# ├── obmnt                      # persistent device mount point 
+# ├── obmnt                      # persistent device mount point
 # │   └── overboot               # repository directory
 # │       ├── durables           # durables storage directory
 # │       ├── upper              # overlayfs upper layer data (if configured)
@@ -22,7 +22,7 @@
 #set -x
 set -e
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR/../.."
 TESTS_DIR="$PROJECT_ROOT/tests"
 TEST_RES_DIR="$TESTS_DIR/functional/res"
@@ -57,8 +57,7 @@ TEST_OB_OVERLAY_DIR="$TEST_RAMFS_DIR/overlay"
 
 TEST_MAX_NESTED_MOUNTS=4
 
-test_setupFakeRamfsRoot()
-{
+test_setupFakeRamfsRoot() {
   test_createOverbootDeviceImage
   test_mountRootmnt
 
@@ -68,10 +67,10 @@ test_setupFakeRamfsRoot()
   mkdir -p "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1"
   mkdir -p "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2"
 
-  echo -n "$TEST_DURABLE_VALUE" > "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/orig.txt"
-  echo -n "$TEST_DURABLE_VALUE" > "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2/orig.txt"
-  echo -n "$TEST_DURABLE_VALUE" > "$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_1"
-  echo -n "$TEST_DURABLE_VALUE" > "$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_2"
+  echo -n "$TEST_DURABLE_VALUE" >"$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/orig.txt"
+  echo -n "$TEST_DURABLE_VALUE" >"$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2/orig.txt"
+  echo -n "$TEST_DURABLE_VALUE" >"$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_1"
+  echo -n "$TEST_DURABLE_VALUE" >"$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_2"
 
   cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$TEST_ROOTMNT_DIR/etc/overboot.yaml"
   cp -v "$TEST_RES_DIR/fstab" "$TEST_ROOTMNT_DIR/etc/fstab"
@@ -82,16 +81,14 @@ test_setupFakeRamfsRoot()
   sed -i "s/%rootmnt%/$ESCAPED_ROOTMNT_DIR/g" "$TEST_RAMFS_DIR/etc/mtab"
 }
 
-test_mountRootmnt()
-{
+test_mountRootmnt() {
   mkdir -p "$TEST_ROOTMNT_DIR"
   mount -t tmpfs tmpfs "$TEST_ROOTMNT_DIR"
 }
 
-test_createOverbootDeviceImage()
-{
+test_createOverbootDeviceImage() {
   mkdir -p "$(dirname $TEST_OB_DEVICE_PATH)"
-  head -c 16M /dev/zero > "$TEST_OB_DEVICE_PATH"
+  head -c 16M /dev/zero >"$TEST_OB_DEVICE_PATH"
   mke2fs -t ext4 "$TEST_OB_DEVICE_PATH" 2>/dev/null
   mkdir -p "$TEST_MNT_DIR"
 
@@ -103,23 +100,20 @@ test_createOverbootDeviceImage()
   umount "$TEST_MNT_DIR"
 }
 
-test_unmountAll()
-{
+test_unmountAll() {
   for u in $(seq $TEST_MAX_NESTED_MOUNTS); do
     for i in $(awk "\$2 ~ \"^$TEST_TMP_DIR\" { print \$2 }" /proc/mounts); do
-      umount "$i" 2>/dev/null ||:
+      umount "$i" 2>/dev/null || :
     done
   done
 }
 
-test_cleanup()
-{
+test_cleanup() {
   test_unmountAll
   rm -r "$TEST_TMP_DIR"
 }
 
-test_isMounted()
-{
+test_isMounted() {
   path="$1"
   if mount | grep -q "$path"; then
     echo 0
@@ -128,18 +122,15 @@ test_isMounted()
   fi
 }
 
-test_success()
-{
+test_success() {
   echo 0
 }
 
-test_fail()
-{
+test_fail() {
   echo 1
 }
 
-test_waitForCont()
-{
+test_waitForCont() {
   while [ ! -f /tmp/cont ]; do
     sleep 1s
   done
