@@ -19,6 +19,7 @@ typedef struct ObContext
   char* devMountPoint;
   char* overbootDir;
   char* root;
+  bool dirAsDevice;
 } ObContext;
 
 /**

@@ -82,8 +82,16 @@ bool obInitPersistentDevice(ObContext* context)
 {
   ObConfig* config = &context->config;
   if (!obFindDevice(context)) {
-    obLogE("Device %s not found", config->devicePath);
-    return false;
+    sds localRepoDir = sdsnew(context->root);
+    localRepoDir = sdscat(localRepoDir, config->devicePath);
+    strcpy(config->devicePath, localRepoDir);
+    sdsfree(localRepoDir);
+
+    obLogI("Device not found, using %s as a local repository ", config->devicePath);
+    obLogW("Using local repository requires RW mount of the lower layer");
+    context->dirAsDevice = true;
+    bool result = obMountLocalRepository(config->devicePath, context->devMountPoint);
+    return result;
   }
 
   if (!obMountDevice(config->devicePath, context->devMountPoint)) {
@@ -116,6 +124,10 @@ bool obInitOverbootDir(ObContext* context)
 
 bool obInitLowerRoot(ObContext* context)
 {
+  if (context->dirAsDevice) {
+    obRemountRw(context->root, NULL);
+  }
+
   bool result = true;
   sds lowerPath = obGetLowerRootPath(context);
 
@@ -177,6 +189,10 @@ bool obInitOverlayfs(ObContext* context)
     ObLayerItem* currentItem = layerItem;
     layerItem = layerItem->prev;
     free(currentItem);
+  }
+
+  if (context->dirAsDevice) {
+    obBlockByTmpfs(context->config.devicePath);
   }
 
   sdsfree(workPath);

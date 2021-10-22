@@ -33,7 +33,7 @@ static void onScalarValue(ObLayerInfo* info, const char* itemPath, const char* v
 
 // --------- public API ---------- //
 
-
+//TODO: error should cause rollback (write test case)
 ObLayerInfo* obLoadLayerInfo(const char* repoPath, const char* layerName, ObLayerInfo* info)
 {
   char path[OB_PATH_MAX];

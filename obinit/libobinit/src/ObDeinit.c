@@ -5,6 +5,7 @@
 
 #include "ob/ObDeinit.h"
 #include "ob/ObMount.h"
+#include "ob/ObOsUtils.h"
 #include "ObPaths.h"
 
 #include <sds.h>
@@ -16,6 +17,9 @@
 
 bool obDeinitPersistentDevice(ObContext* context)
 {
+  if (!obExists(context->devMountPoint)) {
+    return true;
+  }
   bool result = obUnmountDevice(context->devMountPoint);
   rmdir(context->devMountPoint);
   return result;
@@ -48,12 +52,21 @@ bool obDeinitLowerRoot(ObContext* context)
   sds path = obGetLowerRootPath(context);
   bool result = obMove(path, context->root);
   sdsfree(path);
+
+  if (context->dirAsDevice) {
+    obRemountRo(context->root, NULL);
+  }
+
   return result;
 }
 
 
 bool obDeinitOverlayfs(ObContext* context)
 {
+  if (context->dirAsDevice) {
+    obUnmount(context->config.devicePath);
+
+  }
   return obUnmount(context->root);
 }
 

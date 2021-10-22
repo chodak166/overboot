@@ -52,8 +52,6 @@ static bool obMountImageFile(const char* device, const char* mountPoint)
   return true;
 }
 
-
-
 // --------- public API ---------- //
 
 bool obMountDevice(const char* device, const char* mountPoint)
@@ -84,6 +82,22 @@ bool obMountDevice(const char* device, const char* mountPoint)
 
   obLogE("Device type not supported");
   return false;
+}
+
+bool obMountLocalRepository(const char* repoPath, const char* mountPoint)
+{
+  if (!obExists(repoPath)) {
+    obLogI("Local directory %s does not exist, creating...", repoPath);
+    if (!obMkpath(repoPath, OB_MKPATH_MODE)) {
+      return false;
+    }
+  }
+
+  if (!obRbind(repoPath, mountPoint)) {
+    return false;
+  }
+
+  return true;
 }
 
 bool obUnmount(const char* path)
@@ -233,3 +247,44 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
   return result == 0;
 }
 
+bool obBlockByTmpfs(const char* path)
+{
+  obLogI("Blocking access to %s", path);
+  int result = mount("tmpfs", path, "tmpfs", 0, OB_TMPFS_BLOCK_OPTIONS);
+  if (result != 0) {
+    obLogE("Mounting tmpfs (rw) in %s failed with error: %s",
+           path, strerror(errno));
+    return false;
+  }
+
+  char readmePath[OB_CPATH_MAX];
+  sprintf(readmePath, "%s/%s", path, OB_TMPFS_BLOCK_INFO_FILE);
+  FILE* file = fopen(readmePath, "w");
+  if (file != NULL) {
+    obLogI("Creating %s file: %s", OB_TMPFS_BLOCK_INFO_FILE, readmePath);
+    fputs(OB_TMPFS_BLOCK_INFO_TEXT, file);
+    fclose(file);
+  }
+  else {
+    obLogW("Cannot create %s", readmePath);
+  }
+  return obRemountRo(path, NULL);
+}
+
+bool obRemountRw(const char* path, void* data)
+{
+  if (mount("", path, "", MS_REMOUNT, data) != 0) {
+    obLogE("Remounting (RW) %s failed: ", path, strerror(errno));
+    return false;
+  }
+  return true;
+}
+
+bool obRemountRo(const char* path, void* data)
+{
+  if (mount("", path, "", MS_REMOUNT | MS_RDONLY, data) != 0) {
+    obLogE("Remounting (RO) %s failed: ", path, strerror(errno));
+    return false;
+  }
+  return true;
+}

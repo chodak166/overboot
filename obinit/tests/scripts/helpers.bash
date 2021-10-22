@@ -55,6 +55,10 @@ TEST_LAYER_3_NAME="third-test-layer.obld"
 
 TEST_OB_OVERLAY_DIR="$TEST_RAMFS_DIR/overlay"
 
+TEST_INNER_DEV_DIR="$TEST_ROOTMNT_DIR/var/obdev"
+TEST_INNER_LAYER_NAME="internal-test-layer"
+TEST_INNER_LAYER_DIR="$TEST_INNER_DEV_DIR/$TEST_OB_REPOSITORY_NAME/layers/$TEST_INNER_LAYER_NAME"
+
 TEST_MAX_NESTED_MOUNTS=4
 
 test_setupFakeRamfsRoot() {
@@ -66,6 +70,7 @@ test_setupFakeRamfsRoot() {
   mkdir -p "$TEST_RAMFS_DIR/etc"
   mkdir -p "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1"
   mkdir -p "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2"
+  mkdir -p "$TEST_INNER_LAYER_DIR"
 
   echo -n "$TEST_DURABLE_VALUE" >"$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/orig.txt"
   echo -n "$TEST_DURABLE_VALUE" >"$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2/orig.txt"
@@ -109,6 +114,8 @@ test_unmountAll() {
 }
 
 test_cleanup() {
+  sync -f "$TEST_TMP_DIR"
+  sleep 0.1s
   test_unmountAll
   rm -r "$TEST_TMP_DIR"
 }

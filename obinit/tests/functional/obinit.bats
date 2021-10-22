@@ -261,7 +261,36 @@ teardown()
   [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_2/$testFileName2" ]
 }
 
-@test "obinit restore original rootmnt after rollback" {
+@test "obinit should use rootmnt subdirectory as a device if the configuration doesn't point to a file or a device" {
+  obFailed=false
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml" || obFailed=true
+
+  [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
+}
+
+@test "obinit should block write access to the local repository directory via mounted overlayfs" {
+  obFailed=false
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml" || obFailed=true
+
+  testFileName="${RANDOM}-$(date +%s).test"
+  canTouchThis=1
+  touch "$TEST_INNER_DEV_DIR/$testFileName" 2>/dev/null || canTouchThis=0
+
+  [ -d "$TEST_INNER_DEV_DIR" ]
+  [ $canTouchThis -eq 0 ]
+}
+
+@test "obinit should allow write access to the local repository directory via durables" {
+  obFailed=false
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml" || obFailed=true
+
+  testFileName="${RANDOM}-$(date +%s).test"
+  touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName"
+  
+  [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_1/$testFileName" ]
+}
+
+@test "obinit should restore original rootmnt after rollback" {
   obFailed=false
   $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-rollback.yaml" || obFailed=true
 
@@ -278,7 +307,7 @@ teardown()
   [ ! -d "$TEST_OB_DEVICE_MNT_PATH" ]
 }
 
-@test "obinit should not leave any memory leaks'" {
+@test "obinit should not leave any memory leaks" {
   if command -v valgrind &>/dev/null; then
       valgrind -q --leak-check=full --track-origins=yes --error-exitcode=1 \
    $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"

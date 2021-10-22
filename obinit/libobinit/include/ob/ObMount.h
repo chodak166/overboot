@@ -15,6 +15,8 @@ bool obUnmount(const char* path);
 
 bool obUnmountDevice(const char* mountPoint);
 
+bool obMountLocalRepository(const char* repoPath, const char* mountPoint);
+
 bool obRbind(const char* srcPath, const char* dstPath);
 
 bool obMove(const char* srcPath, const char* dstPath);
@@ -27,5 +29,11 @@ void obFreeLoopDevice(int deviceFd);
 
 bool obMountOverlay(char** layers, int layerCount, const char* upper,
                     const char* work, const char* mountPoint);
+
+bool obBlockByTmpfs(const char* path);
+
+bool obRemountRw(const char* path, void* data);
+
+bool obRemountRo(const char* path, void* data);
 
 #endif // OBMOUNT_H

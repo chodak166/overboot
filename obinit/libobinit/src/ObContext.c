@@ -61,6 +61,8 @@ void obInitializeObContext(ObContext* context, const char* prefix)
     context->root = sdscat(context->root, DEFAULT_ROOTMNT);
     obLogI("The rootmnt environment variable not set, using %s", context->root);
   }
+
+  context->dirAsDevice = false;
 }
 
 ObContext* obCreateObContext(const char* prefix)

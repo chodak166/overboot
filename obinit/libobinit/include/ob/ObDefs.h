@@ -102,4 +102,16 @@
 #define OB_DEV_MOUNT_OPTIONS ""
 #endif
 
+#ifndef OB_TMPFS_BLOCK_OPTIONS
+#define OB_TMPFS_BLOCK_OPTIONS "size=256,mode=0600"
+#endif
+
+#ifndef OB_TMPFS_BLOCK_INFO_FILE
+#define OB_TMPFS_BLOCK_INFO_FILE "README.txt"
+#endif
+
+#ifndef OB_TMPFS_BLOCK_INFO_TEXT
+#define OB_TMPFS_BLOCK_INFO_TEXT "This directory has been hidden by Overboot"
+#endif
+
 #endif // OBDEFS_H
