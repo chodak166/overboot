@@ -1,0 +1,24 @@
+enabled: false
+
+layers:
+  visible: true
+  device: "/var/obdev"
+  repository: "overboot"
+  head: "root"
+
+upper:
+  type: "tmpfs"
+  size: "50%"
+#upper:
+  #type: "persistent"
+#upper:
+  #type: "volatile"
+
+durables:
+    - path: "/etc/overboot.yaml"
+      copy_origin: true
+    - path: "/etc/overboot.d"
+      copy_origin: true
+
+config_dir: "overboot.d"
+

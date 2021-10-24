@@ -22,7 +22,7 @@ readWithTimeout() {
         stty $old
 }
 
-obBin=${rootmnt}/usr/bin/obinit
+obBin=${rootmnt}/sbin/obinit
 timeout=25
 
 if [ ! -f ${obBin} ]; then

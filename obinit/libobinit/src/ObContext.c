@@ -7,7 +7,7 @@
 #include "ob/ObLogging.h"
 #include "ObOsUtils.h"
 #include "ObBlkid.h"
-#include "sds.h"
+#include <sds.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -91,6 +91,7 @@ bool obFindDevice(ObContext* context)
     return false;
   }
 
+  //TODO: use sds?
   if (!obIsValidDevice(config->devicePath)) {
     char newPath[OB_DEV_PATH_MAX];
     strcpy(newPath, config->prefix);
@@ -99,7 +100,8 @@ bool obFindDevice(ObContext* context)
       strcpy(newPath, config->prefix);
       strcat(newPath, context->root);
       strncat(newPath, config->devicePath, OB_DEV_PATH_MAX);
-      if (!obIsValidDevice(newPath)) {
+      if (!obIsValidDevice(newPath)
+          || obIsDirectory(newPath)) {
         result = false;
       }
     }

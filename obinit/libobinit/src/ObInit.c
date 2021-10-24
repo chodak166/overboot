@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 typedef struct OverlayPaths
 {
@@ -133,6 +134,8 @@ bool obInitPersistentDevice(ObContext* context)
     obLogI("Device not found, using %s as a local repository ", config->devicePath);
     obLogW("Using local repository requires RW mount of the lower layer");
     context->dirAsDevice = true;
+    obRemountRw(context->root, NULL);
+
     bool result = obMountLocalRepository(config->devicePath, context->devMountPoint);
     return result;
   }
@@ -167,10 +170,6 @@ bool obInitOverbootDir(ObContext* context)
 
 bool obInitLowerRoot(ObContext* context)
 {
-  if (context->dirAsDevice) {
-    obRemountRw(context->root, NULL);
-  }
-
   bool result = true;
   sds lowerPath = obGetLowerRootPath(context);
 
@@ -236,6 +235,8 @@ bool obInitOverlayfs(ObContext* context)
   if (context->dirAsDevice && !obBlockByTmpfs(context->config.devicePath)) {
     result = false;
   }
+
+  chmod(context->root, OB_ROOT_MODE); //TODO: move to mount?
 
   freeOverlayPaths(&paths);
   return result;
@@ -335,6 +336,8 @@ bool obInitDurables(ObContext* context)
       else if (!isDir && !obExists(persistentPath)) {
         obLogI("This durable is not a directory");
         if (durable->copyOrigin) {
+          // TODO: debug this error:
+          // Cannot copy /root/etc/overboot.yaml to /obmnt/overboot/durables/etc/overboot.yaml: Invalid cross-device link
           obLogI("Copying original file from %s to %s", bindPath, persistentPath);
           if (!obCopyFile(bindPath, persistentPath)) {
             obLogE("Copying originl file failed");

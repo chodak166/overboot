@@ -41,7 +41,7 @@ target_compile_definitions(${TARGET}
   )
 
 option(OB_USE_BLKID "Use liblkid" ON)
-if (${OB_BUILD_TESTS})
+if (${OB_USE_BLKID})
   target_compile_definitions(${TARGET}
     PRIVATE
     -DOB_USE_BLKID

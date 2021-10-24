@@ -39,7 +39,8 @@ int main(int argc, char* argv[])
   obLogObContext(context);
 
   int exitCode = EXIT_SUCCESS;
-  if (!obExecObInitTasks(context)) {
+
+  if (config->enabled && !obExecObInitTasks(context)) {
     exitCode = EXIT_FAILURE;
   }
 

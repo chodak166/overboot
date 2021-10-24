@@ -85,6 +85,8 @@ test_setupFakeRamfsRoot() {
 
   ESCAPED_ROOTMNT_DIR=$(sed 's/[&/\]/\\&/g' <<<"$TEST_ROOTMNT_DIR")
   sed -i "s/%rootmnt%/$ESCAPED_ROOTMNT_DIR/g" "$TEST_RAMFS_DIR/etc/mtab"
+
+  mount -o remount,ro "$TEST_ROOTMNT_DIR"
 }
 
 test_mountRootmnt() {

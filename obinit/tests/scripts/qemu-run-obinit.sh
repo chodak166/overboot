@@ -5,7 +5,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 set -e
 
 DEBIAN_SUITE=buster
-DOCKER_BUILD_IMAGE=chodak166/dev-cpp:buster-1.1
+DOCKER_BUILD_IMAGE=chodak166/dev-cpp:buster-1.2
 OBINIT_DIR="$SCRIPT_DIR/../.."
 
 OBINIT_BUILD_DIR="$OBINIT_DIR/build/$DEBIAN_SUITE"
@@ -56,7 +56,10 @@ createBaseImg()
 
 buildObinit()
 {
-  docker run --rm -v "$OBINIT_DIR":"$OBINIT_DIR" $DOCKER_BUILD_IMAGE /bin/bash -c <<EOC \
+  docker run --rm \
+    -v "$OBINIT_DIR":"$OBINIT_DIR" \
+    -v "$OBINIT_DIR/../cmake":"$OBINIT_DIR/../cmake" \
+    $DOCKER_BUILD_IMAGE /bin/bash -c <<EOC \
 " [ -d '$OBINIT_BUILD_DIR' ] || mkdir '$OBINIT_BUILD_DIR'; \
 cd '$OBINIT_BUILD_DIR' && \
 cmake -DOB_BUILD_TESTS=OFF '$OBINIT_DIR' && \

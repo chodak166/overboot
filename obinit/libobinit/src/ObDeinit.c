@@ -17,11 +17,16 @@
 
 bool obDeinitPersistentDevice(ObContext* context)
 {
+  if (context->dirAsDevice) {
+    obRemountRo(context->root, NULL);
+  }
+
   if (!obExists(context->devMountPoint)) {
     return true;
   }
   bool result = obUnmountDevice(context->devMountPoint);
   rmdir(context->devMountPoint);
+
   return result;
 }
 
@@ -52,10 +57,6 @@ bool obDeinitLowerRoot(ObContext* context)
   sds path = obGetLowerRootPath(context);
   bool result = obMove(path, context->root);
   sdsfree(path);
-
-  if (context->dirAsDevice) {
-    obRemountRo(context->root, NULL);
-  }
 
   return result;
 }

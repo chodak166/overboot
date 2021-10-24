@@ -90,6 +90,10 @@
 #define OB_MKPATH_MODE 0700
 #endif
 
+#ifndef OB_ROOT_MODE
+#define OB_ROOT_MODE 0755
+#endif
+
 #ifndef OB_DEV_IMAGE_FS
 #define OB_DEV_IMAGE_FS "ext4"
 #endif
@@ -111,7 +115,7 @@
 #endif
 
 #ifndef OB_TMPFS_BLOCK_INFO_TEXT
-#define OB_TMPFS_BLOCK_INFO_TEXT "This directory has been hidden by Overboot"
+#define OB_TMPFS_BLOCK_INFO_TEXT "This directory has been hidden by Overboot\n"
 #endif
 
 #endif // OBDEFS_H
