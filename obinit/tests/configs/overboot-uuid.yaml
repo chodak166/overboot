@@ -1,0 +1,22 @@
+enabled: true
+layers:
+  visible: true
+  device: "UUID=ddbdd956-4bef-4c43-b99f-6a7ae2a95a86"
+  repository: "overboot"
+  head: "third-test-layer"
+upper:
+  type: "tmpfs"
+  size: "4096k"
+#upper:
+  #type: "persistent"
+#upper:
+  #type: "volatile"
+durables:
+    - path: "/test/durables-dir-1"
+      copy_origin: false
+    - path: "/test/durables-dir-2"
+      copy_origin: true
+    - path: "/test/persistent_file_1"
+      copy_origin: false
+    - path: "/test/persistent_file_2"
+      copy_origin: true

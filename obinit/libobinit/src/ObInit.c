@@ -17,6 +17,44 @@
 #include <string.h>
 #include <errno.h>
 
+typedef struct OverlayPaths
+{
+  sds workPath;
+  sds lowerPath;
+  sds upperPath;
+  sds repoPath;
+  sds layersPath;
+} OverlayPaths;
+
+static OverlayPaths newOverlayPaths(const ObContext* context)
+{
+  OverlayPaths paths;
+  paths.workPath = obGetOverlayWorkPath(context);
+
+  paths.repoPath = sdsempty();
+  paths.repoPath = sdscatprintf(paths.repoPath, ""
+                                "%s/%s", context->devMountPoint,
+                                context->config.repository);
+
+  paths.layersPath = sdsempty();
+  paths.layersPath = sdscatprintf(paths.layersPath, "%s/%s",
+                                  paths.repoPath, OB_LAYERS_DIR_NAME);
+
+  paths.lowerPath = obGetLowerRootPath(context);
+  paths.upperPath = obGetUpperPath(context);
+  return paths;
+}
+
+static void freeOverlayPaths(OverlayPaths* paths)
+{
+  sdsfree(paths->workPath);
+  sdsfree(paths->repoPath);
+  sdsfree(paths->layersPath);
+  sdsfree(paths->lowerPath);
+  sdsfree(paths->upperPath);
+}
+
+
 static bool obPreparePersistentUpperDir(const ObContext* context, sds upperPath)
 {
   obLogI("Preparing persistent upper layer dir: %s", upperPath);
@@ -82,6 +120,11 @@ bool obInitPersistentDevice(ObContext* context)
 {
   ObConfig* config = &context->config;
   if (!obFindDevice(context)) {
+    if (strlen(config->devicePath) && config->devicePath[0] != '/') {
+      obLogE("%s does not look like path nor valid UUID, aborting", config->devicePath);
+      return false;
+    }
+
     sds localRepoDir = sdsnew(context->root);
     localRepoDir = sdscat(localRepoDir, config->devicePath);
     strcpy(config->devicePath, localRepoDir);
@@ -146,22 +189,20 @@ bool obInitOverlayfs(ObContext* context)
   bool result = true;
   ObConfig* config = &context->config;
 
-  sds workPath = obGetOverlayWorkPath(context);
-
-  sds repoPath = sdsempty();
-  repoPath = sdscatprintf(repoPath, "%s/%s", context->devMountPoint, config->repository);
-
-  sds layersPath = sdsempty();
-  layersPath = sdscatprintf(layersPath, "%s/%s", repoPath, OB_LAYERS_DIR_NAME);
-
-  sds lowerPath = obGetLowerRootPath(context);
-  sds upperPath = obGetUpperPath(context);
+  OverlayPaths paths = newOverlayPaths(context);
 
   uint8_t count = 0;
-  ObLayerItem* topLayer = obCollectLayers(layersPath, config->headLayer, lowerPath, &count);
+  ObLayerItem* topLayer = obCollectLayers(paths.layersPath, config->headLayer,
+                                          paths.lowerPath, &count);
+
+  if (!topLayer) {
+    freeOverlayPaths(&paths);
+    return false;
+  }
+
   if (count == 0) {
     topLayer = calloc(1, sizeof(ObLayerItem));
-    strcpy(topLayer->layerPath, lowerPath);
+    strcpy(topLayer->layerPath, paths.lowerPath);
     topLayer->prev = NULL;
     count = 1;
   }
@@ -179,7 +220,8 @@ bool obInitOverlayfs(ObContext* context)
     layerItem = layerItem->prev;
   }
 
-  if (!obMountOverlay(layers, count, upperPath, workPath, context->root)) {
+  if (!obMountOverlay(layers, count, paths.upperPath,
+                      paths.workPath, context->root)) {
     obLogE("Cannot mount overlay");
     result = false;
   }
@@ -191,15 +233,11 @@ bool obInitOverlayfs(ObContext* context)
     free(currentItem);
   }
 
-  if (context->dirAsDevice) {
-    obBlockByTmpfs(context->config.devicePath);
+  if (context->dirAsDevice && !obBlockByTmpfs(context->config.devicePath)) {
+    result = false;
   }
 
-  sdsfree(workPath);
-  sdsfree(repoPath);
-  sdsfree(layersPath);
-  sdsfree(lowerPath);
-  sdsfree(upperPath);
+  freeOverlayPaths(&paths);
   return result;
 }
 
@@ -241,6 +279,8 @@ bool obInitManagementBindings(ObContext* context)
     if (!obRbind(upper, bindedUpper)) {
         result = false;
     }
+    sdsfree(upper);
+    sdsfree(bindedUpper);
   }
 
   sdsfree(bindedOverlay);

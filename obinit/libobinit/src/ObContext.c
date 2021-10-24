@@ -7,6 +7,7 @@
 
 #include "ob/ObOsUtils.h"
 #include "ob/ObLogging.h"
+#include "ObBlkid.h"
 #include "sds.h"
 
 #include <stdlib.h>
@@ -21,7 +22,6 @@ static const char* DEFAULT_REPO_NAME = "overboot";
 
 static bool obIsValidDevice(const char* path)
 {
-  //TODO: consider allowing using directory as device
   return obIsBlockDevice(path)
       || obIsFile(path);
 }
@@ -86,6 +86,11 @@ bool obFindDevice(ObContext* context)
 {
   ObConfig* config = &context->config;
   bool result = true;
+
+  if (obIsUuid(config->devicePath)
+      && !obGetPathByUuid(config->devicePath, OB_PATH_MAX)) {
+    return false;
+  }
 
   if (!obIsValidDevice(config->devicePath)) {
     char newPath[OB_DEV_PATH_MAX];

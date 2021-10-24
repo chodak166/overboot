@@ -9,22 +9,53 @@ setup()
   if [ ! -f "$OBINIT_BIN"  ]; then
     echo "ERROR: obinit binary not found ($OBINIT_BIN), please provide OBINIT_BIN environment variable" 1>&2 && exit 1
   fi
+
+  loopDev=""
 }
 
 teardown()
 {
   test_cleanup
+
+  if [ ! -z "$loopDev" ]; then
+    losetup -d $loopDev
+  fi
 }
 
+# run command through valgrind if present
+vgRun()
+{
+  if command -v valgrind &>/dev/null; then
+    vgLog="$TEST_TMP_DIR/valgrind-${RANDOM}.log"
+    vgExitCode=0
+    valgrind -q --leak-check=full --track-origins=yes \
+      "$@" 2> "$vgLog" || vgExitCode=$?
 
-@test "obinit should mount data device as configured" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+    leaks=true
+    cat "$vgLog" | grep -q "lost" || leaks=false
+    cat "$vgLog"
+    [ $leaks = false ]
+  else
+    "$@"
+    vgExitCode=$?
+  fi
+}
+
+@test "obinit should mount data device by path" {
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
    
   [ $(test_isMounted "$TEST_OB_DEVICE_MNT_PATH") -eq 0 ]
 }
 
+@test "obinit should mount data device by UUID" {
+  loopDev=$(losetup -P --show -f "$TEST_OB_DEVICE_PATH")
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-uuid.yaml" ||:
+
+  [ $(test_isMounted "$TEST_OB_DEVICE_MNT_PATH") -eq 0 ]
+}
+
 @test "obinit should prepare overlay directory" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
    
   [ -d "$TEST_OB_OVERLAY_DIR" ]
   [ -d "$TEST_OB_OVERLAY_DIR/work" ]
@@ -34,7 +65,7 @@ teardown()
 }
 
 @test "obinit should set tmpfs size as configured" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
   expectedSize=$(cat "$TEST_OB_CONFIG_PATH" | yq -r ".upper.size")
   actualSize=$(df -Pk "$TEST_OB_OVERLAY_DIR" | tail -1 | awk '{print $2}')k
  
@@ -45,7 +76,7 @@ teardown()
 
 @test "obinit should bind upper directory from the persistent device if configured" {
 
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml"
 
   SAMPLE_FILE="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/upper/binded_upper_sample_file"
   BINDED_SAMPLE_FILE="$TEST_ROOTMNT_BINDINGS_DIR/upper/binded_upper_sample_file"
@@ -71,19 +102,19 @@ teardown()
   mkdir -p $(dirname "$SAMPLE_FILE")
   touch "$SAMPLE_FILE"
    
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-volatile.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-volatile.yaml"
    
   [ ! -f "$SAMPLE_FILE" ]
 }
 
 @test "obinit should move rootmnt to the lower layer directory" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
  
   [ -f "$TEST_OB_OVERLAY_DIR/lower-root/etc/fstab" ]
 }
 
 @test "obinit should mount overlayfs in rootmnt when the upper layer is tmpfs" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
   testFileName=test-$RANDOM.file
   touch "$TEST_ROOTMNT_DIR/$testFileName"
  
@@ -91,7 +122,7 @@ teardown()
 }
 
 @test "obinit should mount overlayfs in rootmnt when the upper layer is persistent" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml" > /tmp/obinit.log
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml" > /tmp/obinit.log
   testFileName=test-$RANDOM.file
   touch "$TEST_ROOTMNT_DIR/$testFileName"
  
@@ -99,7 +130,7 @@ teardown()
 }
 
 @test "obinit should bind ramfs overboot directory into rootmnt" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
  
   testFileName=test-$RANDOM.file
   touch "$TEST_ROOTMNT_DIR/$testFileName"
@@ -111,7 +142,7 @@ teardown()
 }
 
 @test "obinit should bind layer repository if the configuration says so" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
 
   [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers" ]
   [ -f "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_LAYER_1_NAME/root/etc/layer.yaml" ]
@@ -119,7 +150,7 @@ teardown()
 
 
 @test "obinit should bind durable directories and overlay origin if the configuration says so" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
 
   testFileName="${RANDOM}-$(date +%s).test"
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName"
@@ -129,7 +160,7 @@ teardown()
 }
 
 @test "obinit should bind durable directories and copy origin if the configuration says so" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
 
   testFileName="${RANDOM}-$(date +%s).test"
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2/$testFileName"
@@ -147,9 +178,10 @@ teardown()
   mkdir -p "$mountedDurableDir"
   touch "$mountedDurableDir/$testFileName"
 
+  sync -f "$TEST_TMP_DIR"
   umount "$TEST_MNT_DIR"
   
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
   
   [ ! -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_2/orig.txt" ]
   [ ! -f "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2/orig.txt" ]
@@ -157,7 +189,7 @@ teardown()
 }
 
 @test "obinit should bind durable file" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
 
   persistentFile="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_1"
   bindedFile="$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_1"
@@ -168,8 +200,7 @@ teardown()
 }
 
 @test "obinit should bind durable file and copy the original file if the configuration says so and the persistent file is not present" {
-
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
   
   copiedFile="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_2"
 
@@ -178,7 +209,6 @@ teardown()
 }
 
 @test "obinit should bind durable file and skip copying the original file if the persistent one is present" {
-
   testValue=${RANDOM}-$(date +%s)
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
   newDurableFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/durables/$TEST_DURABLE_FILE_2"
@@ -188,7 +218,7 @@ teardown()
   tree $TEST_TMP_DIR
   umount "$TEST_MNT_DIR"
   
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
 
   persistentFile="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_2"
 
@@ -200,7 +230,7 @@ teardown()
   ESCAPED_ROOTMNT_DIR=$(sed 's/[&/\]/\\&/g' <<<"$TEST_ROOTMNT_DIR")
   sed -i "s/%rootmnt%/$ESCAPED_ROOTMNT_DIR/g" "$TEST_RAMFS_DIR/etc/mtab"
 
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
 
   echo -e "\n\nmtab:"
   cat "$TEST_RAMFS_DIR/etc/mtab"
@@ -213,8 +243,7 @@ teardown()
 }
 
 @test "obinit should mount all the layers required by the head layer" {
-
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
 
   tree $TEST_TMP_DIR
   
@@ -233,23 +262,22 @@ teardown()
 }
 
 @test "obinit should assume 'root' head layer if not configured" {
-
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-nohead.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-nohead.yaml"
 
   [ ! -f "$TEST_ROOTMNT_DIR/test/file1" ]
   [ -f "$TEST_OB_CONFIG_PATH" ]
 }
 
 @test "obinit should not mount root if the bottom layer's underlayer is 'none'" {
-   $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-altroot.yaml"
+  # alt-root.obld uses 'none' underlayer
+  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-altroot.yaml"
 
-  [ -f "$TEST_ROOTMNT_DIR/test/file4" ]
-  [ ! -f "TEST_OB_CONFIG_PATH" ]
+  [ ! -f "$TEST_OB_CONFIG_PATH" ]
 }
 
 
 @test "obinit should use config_dir field and read all config files inside given directory" {
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-include.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-include.yaml"
 
   testFileName1="${RANDOM}-$(date +%s).test"
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName1"
@@ -262,15 +290,13 @@ teardown()
 }
 
 @test "obinit should use rootmnt subdirectory as a device if the configuration doesn't point to a file or a device" {
-  obFailed=false
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml" || obFailed=true
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
 
   [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
 }
 
 @test "obinit should block write access to the local repository directory via mounted overlayfs" {
-  obFailed=false
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml" || obFailed=true
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
 
   testFileName="${RANDOM}-$(date +%s).test"
   canTouchThis=1
@@ -281,8 +307,7 @@ teardown()
 }
 
 @test "obinit should allow write access to the local repository directory via durables" {
-  obFailed=false
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml" || obFailed=true
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
 
   testFileName="${RANDOM}-$(date +%s).test"
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName"
@@ -291,25 +316,25 @@ teardown()
 }
 
 @test "obinit should restore original rootmnt after rollback" {
-  obFailed=false
-  $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-rollback.yaml" || obFailed=true
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-rollback.yaml"
 
   [ -f "$TEST_ROOTMNT_DIR/etc/fstab" ]
 
+  sync -f "$TEST_TMP_DIR"
   umount "$TEST_ROOTMNT_DIR"
 
   tmpInMount=1
   mount | grep -q "$TEST_TMP_DIR" || tmpInMount=0
 
-  [ $obFailed = true ]
+  [ $vgExitCode -ne 0 ]
   [ $tmpInMount -eq 0 ]
   [ ! -d "$TEST_OB_OVERLAY_DIR" ]
   [ ! -d "$TEST_OB_DEVICE_MNT_PATH" ]
 }
 
-@test "obinit should not leave any memory leaks" {
-  if command -v valgrind &>/dev/null; then
-      valgrind -q --leak-check=full --track-origins=yes --error-exitcode=1 \
-   $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
-  fi
+@test "obinit should rollback when the layer chain is broken" {
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-wrong-head.yaml"
+   
+  [ $vgExitCode -ne 0 ]
+  [ ! -d "$TEST_OB_OVERLAY_DIR" ]
 }

@@ -41,6 +41,7 @@ bool obParseYamlFile(void* context, const char* path, ObYamlValueCallback valueC
   }
   if(configFile == NULL) {
     obLogE("Failed to open file: %s", path);
+    yaml_parser_delete(&parser);
     return false;
   }
 

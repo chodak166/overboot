@@ -37,6 +37,7 @@ TEST_MNT_DIR="$TEST_TMP_DIR/mnt"
 TEST_RAMFS_DIR="$TEST_TMP_DIR/ramfs"
 TEST_ROOTMNT_DIR="$TEST_RAMFS_DIR/root"
 TEST_ROOTMNT_BINDINGS_DIR="$TEST_ROOTMNT_DIR/overboot"
+TEST_OB_DEVICE_UUID="ddbdd956-4bef-4c43-b99f-6a7ae2a95a86"
 TEST_OB_DEVICE_PATH="$TEST_RAMFS_DIR/dev/ob_test.img"
 TEST_OB_DEVICE_MNT_PATH="$TEST_RAMFS_DIR/obmnt"
 TEST_OB_REPOSITORY_NAME="overboot"
@@ -95,6 +96,8 @@ test_createOverbootDeviceImage() {
   mkdir -p "$(dirname $TEST_OB_DEVICE_PATH)"
   head -c 16M /dev/zero >"$TEST_OB_DEVICE_PATH"
   mke2fs -t ext4 "$TEST_OB_DEVICE_PATH" 2>/dev/null
+  echo "y" | tune2fs -U "$TEST_OB_DEVICE_UUID" "$TEST_OB_DEVICE_PATH"
+
   mkdir -p "$TEST_MNT_DIR"
 
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
@@ -102,13 +105,13 @@ test_createOverbootDeviceImage() {
   mkdir -p "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME"
   cp -r "$TEST_RES_DIR/layers" "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/"
   sync
-  umount "$TEST_MNT_DIR"
+  umount -fl "$TEST_MNT_DIR"
 }
 
 test_unmountAll() {
   for u in $(seq $TEST_MAX_NESTED_MOUNTS); do
     for i in $(awk "\$2 ~ \"^$TEST_TMP_DIR\" { print \$2 }" /proc/mounts); do
-      umount "$i" 2>/dev/null || :
+      umount -fl "$i" 2>/dev/null || :
     done
   done
 }

@@ -21,6 +21,7 @@ add_library(${TARGET} STATIC
   src/ObTaskList.c
   src/ObInitTasks.c
   src/ObPaths.c
+  src/ObBlkid.c
 
   extern/sds/sds.c
   )
@@ -37,3 +38,12 @@ target_compile_definitions(${TARGET}
   PRIVATE
   -D_GNU_SOURCE
   )
+
+option(OB_USE_BLKID "Use liblkid" ON)
+if (${OB_BUILD_TESTS})
+  target_compile_definitions(${TARGET}
+    PRIVATE
+    -DOB_USE_BLKID
+    )
+  target_link_libraries(${TARGET} PUBLIC blkid)
+endif()

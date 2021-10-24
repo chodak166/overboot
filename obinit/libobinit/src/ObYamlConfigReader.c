@@ -107,6 +107,7 @@ static bool loadYamlConfigDir(ObConfig* config, const char* configFilePath)
           sdsfree(fullPath);
           free(namelist[i]);
       }
+      free(namelist);
     }
   }
 
