@@ -4,9 +4,9 @@
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
 #include "ob/ObYamlConfigReader.h"
-#include "ob/ObOsUtils.h"
 #include "ob/ObConfig.h"
 #include "ob/ObLogging.h"
+#include "ObOsUtils.h"
 #include "ObYamlParser.h"
 
 #include <sds.h>

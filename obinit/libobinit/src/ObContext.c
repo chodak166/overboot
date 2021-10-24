@@ -4,9 +4,8 @@
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
 #include "ob/ObContext.h"
-
-#include "ob/ObOsUtils.h"
 #include "ob/ObLogging.h"
+#include "ObOsUtils.h"
 #include "ObBlkid.h"
 #include "sds.h"
 

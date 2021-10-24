@@ -3,10 +3,10 @@
 // See accompanying file LICENSE.txt or copy at
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
-#include "ob/ObYamlLayerReader.h"
-#include "ob/ObOsUtils.h"
-#include "ob/ObLogging.h"
+#include "ObYamlLayerReader.h"
+#include "ObOsUtils.h"
 #include "ObYamlParser.h"
+#include "ob/ObLogging.h"
 
 #include <stdio.h>
 #include <string.h>

@@ -6,7 +6,7 @@
 #ifndef OBYAMLLAYERREADER_H
 #define OBYAMLLAYERREADER_H
 
-#include "ob/ObLayerInfo.h"
+#include "ObLayerInfo.h"
 
 ObLayerInfo* obLoadLayerInfo(const char* repoPath, const char* layerName, ObLayerInfo* info);
 

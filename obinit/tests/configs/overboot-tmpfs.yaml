@@ -20,3 +20,5 @@ durables:
       copy_origin: false
     - path: "/test/persistent_file_2"
       copy_origin: true
+
+#config_dir: "overboot.d"

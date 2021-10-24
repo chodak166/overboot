@@ -4,8 +4,8 @@
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
 #include "ObLayerCollector.h"
-#include "ob/ObLayerInfo.h"
-#include "ob/ObYamlLayerReader.h"
+#include "ObLayerInfo.h"
+#include "ObYamlLayerReader.h"
 
 #include <string.h>
 #include <stdlib.h>

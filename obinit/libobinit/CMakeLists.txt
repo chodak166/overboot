@@ -31,6 +31,7 @@ target_include_directories(${TARGET}
   ${CMAKE_CURRENT_LIST_DIR}/include
 
   PRIVATE
+  src
   ${CMAKE_CURRENT_LIST_DIR}/extern/sds
   )
 

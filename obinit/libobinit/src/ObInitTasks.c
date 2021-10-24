@@ -6,8 +6,8 @@
 #include "ob/ObInitTasks.h"
 
 #include "ObTaskList.h"
+#include "ObDeinit.h"
 #include "ob/ObInit.h"
-#include "ob/ObDeinit.h"
 #include <stdlib.h>
 
 static bool checkRollback(ObContext* context)

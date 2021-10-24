@@ -3,9 +3,9 @@
 // See accompanying file LICENSE.txt or copy at
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
-#include "ob/ObDeinit.h"
-#include "ob/ObMount.h"
-#include "ob/ObOsUtils.h"
+#include "ObDeinit.h"
+#include "ObMount.h"
+#include "ObOsUtils.h"
 #include "ObPaths.h"
 
 #include <sds.h>
