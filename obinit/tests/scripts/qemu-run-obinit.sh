@@ -10,7 +10,7 @@ OBINIT_DIR="$SCRIPT_DIR/../.."
 
 OBINIT_BUILD_DIR="$OBINIT_DIR/build/$DEBIAN_SUITE"
 OBINIT_BIN="$OBINIT_BUILD_DIR/bin/obinit"
-OBINIT_IRFS_SCRIPT="$OBINIT_DIR/system/usr/share/initramfs-tools/scripts/local-bottom/obinit"
+OBINIT_IRFS_SCRIPT="$OBINIT_DIR/aps/obinit/system/usr/share/initramfs-tools/scripts/local-bottom/obinit"
 OBINIT_CONFIG="$OBINIT_DIR/tests/configs/overboot-tmpfs-sdb.yaml"
 QEMU_DEBIAN_HELPER="$SCRIPT_DIR/qemu-debian-helper"
 
@@ -22,6 +22,9 @@ main()
   createBaseImg
   buildObinit
   installObinit
+
+  initObRepository
+
   runVm
 }
 
@@ -94,6 +97,19 @@ installObinit()
   rmdir "$mntDir"
   echo "done"
   sleep 1s
+}
+
+initObRepository()
+{
+  mntDir="$SCRIPT_DIR/mnt.$(date +%s)"
+  mkdir "$mntDir"
+  mount "$VM_DIR/data.img" "$mntDir"
+
+  mkdir "$mntDir/overboot" ||:
+  cp -r "$OBINIT_DIR/tests/functional/res/layers" "$mntDir/overboot/"
+
+  umount "$mntDir"
+  rmdir "$mntDir"
 }
 
 chrootExec()

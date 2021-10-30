@@ -4,6 +4,10 @@ layers:
   device: "/dev/sdb"
   repository: "overboot"
   head: "third-test-layer"
+
+  # head: "root"
+  # device: "/var/obdev"
+
 upper:
   type: "tmpfs"
   size: "4096k"
