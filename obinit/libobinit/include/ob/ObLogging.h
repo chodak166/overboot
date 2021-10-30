@@ -14,4 +14,7 @@ void obLogI(const char* msg, ...);
 void obLogW(const char* msg, ...);
 void obLogE(const char* msg, ...);
 
+bool obErrorOccurred();
+void clearErrorOccurrence();
+
 #endif // OBLOGGING_H

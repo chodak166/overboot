@@ -20,6 +20,8 @@ static struct {
 } obLoggerSettings = {true, false};
 
 
+static bool _obErrorOccurred = false;
+
 static void obWriteStdLog(const char* log)
 {
   fprintf(stdout, "%s", log);
@@ -119,4 +121,18 @@ void obLogE(const char* msg, ...)
   obDecorateLog(log, msg, "ERROR", args);
   va_end(args);
   obWriteLogE(log);
+
+  if (!_obErrorOccurred) {
+    _obErrorOccurred = true;
+  }
+}
+
+bool obErrorOccurred()
+{
+  return _obErrorOccurred;
+}
+
+void clearErrorOccurrence()
+{
+  _obErrorOccurred = false;
 }

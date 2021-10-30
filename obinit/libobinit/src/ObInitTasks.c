@@ -8,6 +8,7 @@
 #include "ObTaskList.h"
 #include "ObDeinit.h"
 #include "ob/ObInit.h"
+#include "ob/ObLogging.h"
 #include <stdlib.h>
 
 static bool checkRollback(ObContext* context)
@@ -69,6 +70,13 @@ bool obExecObInitTasks(ObContext* context)
 {
   ObTaskListPtr tasks = createObInitTaskList(context);
   bool result = obExecTaskList(tasks);
+
+  if (result && obErrorOccurred()) {
+    obLogE("An error occurred during initialization, please see full log for more details");
+    result = false;
+    obCallUndoChain(tasks->last);
+  }
+
   obFreeTaskList(&tasks);
   return result;
 }
