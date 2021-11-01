@@ -18,6 +18,7 @@ static const char* ROOTMNT_ENV_VAR = "rootmnt";
 static const char* DEFAULT_ROOTMNT = "/root";
 static const char* DEFAULT_TMPFS_SIZE = "50%";
 static const char* DEFAULT_REPO_NAME = "overboot";
+static const char* DEFAULT_CONFIG_DIR = "overboot.d";
 
 static bool obIsValidDevice(const char* path)
 {
@@ -35,6 +36,7 @@ void obInitializeObContext(ObContext* context, const char* prefix)
   strcpy(config->devicePath, "");
   strcpy(config->headLayer, "");
   strcpy(config->repository, DEFAULT_REPO_NAME);
+  strcpy(config->configDir, DEFAULT_CONFIG_DIR);
   strcpy(config->tmpfsSize, DEFAULT_TMPFS_SIZE);
 
   config->enabled = true;
@@ -123,6 +125,7 @@ void obLogObContext(const ObContext* context)
   obLogI("Device path: %s", config->devicePath);
   obLogI("head layer: %s", config->headLayer);
   obLogI("repository: %s", config->repository);
+  obLogI("config dir: %s", config->configDir);
 
   int durablesCount = obCountDurables(config);
   obLogI("durables (%i):", durablesCount);

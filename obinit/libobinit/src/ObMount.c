@@ -267,7 +267,7 @@ bool obBlockByTmpfs(const char* path)
     fclose(file);
   }
   else {
-    obLogW("Cannot create %s", readmePath);
+    obLogE("Cannot create %s", readmePath);
   }
   return obRemountRo(path, NULL);
 }

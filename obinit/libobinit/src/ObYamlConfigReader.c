@@ -80,6 +80,16 @@ static int configFilter(const struct dirent* entry)
   return 0;
 }
 
+static bool obLoadPartialYamlConfig(ObConfig* config, const char* path)
+{
+  sds configDir = sdsnew(config->configDir);
+  memset(config->configDir, 0, sizeof(config->configDir));
+  bool result = obLoadYamlConfig(config, path);
+  strcpy(config->configDir, configDir);
+  sdsfree(configDir);
+  return result;
+}
+
 static bool loadYamlConfigDir(ObConfig* config, const char* configFilePath)
 {
   sds buffer = sdsnew(configFilePath);
@@ -89,7 +99,7 @@ static bool loadYamlConfigDir(ObConfig* config, const char* configFilePath)
   bool result = true;
 
   if (!obExists(configDirPath)) {
-    obLogW("Config directory (%s) does not exist, skipping");
+    obLogW("Config directory (%s) does not exist, skipping", configDirPath);
   }
   else {
     struct dirent **namelist;
@@ -102,8 +112,7 @@ static bool loadYamlConfigDir(ObConfig* config, const char* configFilePath)
       for (int i = 0; i < n; ++i) {
           sds fullPath = sdsempty();
           fullPath = sdscatfmt(fullPath, "%s/%s", configDirPath, namelist[i]->d_name);
-          obLogI("Loading partial config: %s", fullPath);
-          obLoadYamlConfig(config, fullPath);
+          obLoadPartialYamlConfig(config, fullPath);
           sdsfree(fullPath);
           free(namelist[i]);
       }
@@ -122,7 +131,8 @@ static bool loadYamlConfigDir(ObConfig* config, const char* configFilePath)
 
 bool obLoadYamlConfig(ObConfig* config, const char* path)
 {
-  memset(config->configDir, 0, sizeof(config->configDir));
+  obLogI("Loading configuration file: %s", path);
+
   bool result = obParseYamlFile(config, path,
                 (ObYamlValueCallback)&onScalarValue,
                 (ObYamlEntryCallback)&onSequenceEntryStart);

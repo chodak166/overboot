@@ -1,4 +1,5 @@
 enabled: true
+config_dir: ""
 layers:
   visible: true
   device: "/dev/ob_test.img"

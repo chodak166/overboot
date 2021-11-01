@@ -23,20 +23,20 @@
 
 static int obMkdir(const char *path, mode_t mode)
 {
-    struct stat st;
-    int status = 0;
+  struct stat st;
+  int status = 0;
 
-    if (stat(path, &st) != 0) {
-        if (mkdir(path, mode) != 0 && errno != EEXIST) {
-            status = -1;
-        }
+  if (stat(path, &st) != 0) {
+    if (mkdir(path, mode) != 0 && errno != EEXIST) {
+      status = -1;
     }
-    else if (!S_ISDIR(st.st_mode)) {
-        errno = ENOTDIR;
-        status = -1;
-    }
+  }
+  else if (!S_ISDIR(st.st_mode)) {
+    errno = ENOTDIR;
+    status = -1;
+  }
 
-    return status;
+  return status;
 }
 
 static int obRmPath(const char* path, const struct stat* sbuf, int type, struct FTW* ftwb)
@@ -110,15 +110,15 @@ bool obMkpath(const char* path, mode_t mode)
   char* slashPos = NULL;
   while (status == 0 && (slashPos = strchr(searchedPath, '/')) != NULL) {
     if (slashPos != searchedPath) {
-        *slashPos = '\0';
-        status = obMkdir(origPath, mode);
-        *slashPos = '/';
+      *slashPos = '\0';
+      status = obMkdir(origPath, mode);
+      *slashPos = '/';
     }
     searchedPath = slashPos + 1;
   }
 
   if (status == 0) {
-      status = obMkdir(path, mode);
+    status = obMkdir(path, mode);
   }
 
   free(origPath);

@@ -350,7 +350,6 @@ vgRun()
 # --- jobs ---
 
 @test "obinit should update the configuration file on update-config job" {
-
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
   oldConfig="$TEST_TMP_DIR/overboot.yaml"
@@ -365,7 +364,7 @@ vgRun()
 
   [[ $oldConfigSum != $newConfigSum ]]
 
-  umount "$TEST_MNT_DIR"
+  umount -lf "$TEST_MNT_DIR"
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$oldConfig"
    
   oldConfigSum=$(md5sum "$oldConfig" | awk '{print $1}')
@@ -373,10 +372,10 @@ vgRun()
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
   [[ $oldConfigSum == $newConfigSum ]]
   [ ! -f "$jobFile" ]
+  [ $vgExitCode -eq 0 ]
 }
 
 @test "obinit should load and apply the new configuration after the update-config job is finished" {
-
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
   oldConfig="$TEST_TMP_DIR/overboot.yaml"
@@ -386,39 +385,49 @@ vgRun()
   cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$oldConfig"
   cp "$newConfig" "$jobFile"
 
-  umount "$TEST_MNT_DIR"
+  umount -lf "$TEST_MNT_DIR"
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$oldConfig"
    
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
+ # tree $TEST_TMP_DIR
   [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
   [ ! -f "$jobFile" ]
+  [ $vgExitCode -eq 0 ]
 }
 
-# @test "obinit should copy new partial configuration file to config directory on install-config job" {
+@test "obinit should copy new partial configuration file to config directory on install-config job" {
+  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
-#   oldConfig="$TEST_ROOTMNT_DIR/etc/overboot.yaml"
-#   configDir="$TEST_ROOTMNT_DIR/etc/overboot.d"
+  configDir="$TEST_ROOTMNT_DIR/etc/test-overboot.d"
 
-#   configName="my-config-${RANDOM}.yaml"
-#   newConfig="$TEST_TMP_DIR/$configName"
-#   echo ${RANDOM} > "$newConfig"
-#   newConfigSum=$(md5sum "$newConfig" | awk '{print $1}')
-#   jobFile="$TEST_JOBS_DIR/install-config-$configName"
+  configName="my-config-${RANDOM}.yaml"
+  newConfig="$TEST_TMP_DIR/$configName"
+  echo ${RANDOM} > "$newConfig"
+  newConfigSum=$(md5sum "$newConfig" | awk '{print $1}')
+  jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/install-config-$configName"
 
-#   cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$oldConfig"
-#   cp "$newConfig" "$jobFile"
+  mount -o remount,rw "$TEST_ROOTMNT_DIR"
+  cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$TEST_ROOTMNT_DIR/etc/overboot.yaml"
+  mount -o remount,ro "$TEST_ROOTMNT_DIR"
+
+  cp "$newConfig" "$jobFile"
   
-#   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$oldConfig"
+  umount -lf "$TEST_MNT_DIR"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_ROOTMNT_DIR/etc/overboot.yaml"
    
-#   installedConfig="$configDir/$configName"
+  installedConfig="$configDir/$configName"
 
-#   [ -f "$installedConfig" ]
-#   cmp "$newConfig" "$installedConfig"
-#   [ ! -f "$jobFile" ]
-# }
+  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
+  echo "installed config: $installedConfig"
+  tree $TEST_TMP_DIR
+
+  [ -f "$installedConfig" ]
+  cmp "$newConfig" "$installedConfig"
+  [ ! -f "$jobFile" ]
+  [ $vgExitCode -eq 0 ]
+}
 
 @test "obinit should create a new layer from the upper layer on commit job" {
-
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
   testFileName=test-$RANDOM.file
@@ -432,7 +441,7 @@ vgRun()
   echo "name: $layerName" > "$jobFile"
   jobFileSum=$(md5sum "$jobFile" | awk '{print $1}')
 
-  umount "$TEST_MNT_DIR"
+  umount -lf "$TEST_MNT_DIR"
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml"
 
   newLayer="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers/$layerName"
@@ -444,6 +453,7 @@ vgRun()
   [[ $(cat "$newLayer/root/$testFileName") == $testValue ]]
   [[ $jobFileSum == $layerMetaFileSum ]]
   [ ! -f "$jobFile" ]
+  [ $vgExitCode -eq 0 ]
 }
 
 # TODO: make new layer from root?

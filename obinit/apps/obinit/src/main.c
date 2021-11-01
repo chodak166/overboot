@@ -25,6 +25,16 @@
 
 #define OB_MAX_CONFIG_RELOADS 8
 
+static void loadContext(ObContext** context, const ObCliOptions* options)
+{
+  if (*context) {
+    obFreeObContext(context);
+  }
+  *context = obCreateObContext(options->rootPrefix);
+  obLoadYamlConfig(&(*context)->config, options->configFile);
+  obLogObContext(*context);
+}
+
 int main(int argc, char* argv[])
 {
   obInitLogger(OB_LOG_USE_STD, OB_LOG_USE_KMSG);
@@ -34,26 +44,47 @@ int main(int argc, char* argv[])
     exit(options.exitStatus);
   }
 
-  ObContext* context = obCreateObContext(options.rootPrefix);
-  ObConfig* config = &context->config;
-  obLoadYamlConfig(config, options.configFile);
-  obLogObContext(context);
+//  ObContext* context = NULL;
+//  loadContext(&context, &options);
+//  ObConfig* config = &context->config;
 
+//  int exitCode = EXIT_SUCCESS;
+
+//  size_t maxReloads = OB_MAX_CONFIG_RELOADS;
+//  if (config->enabled) {
+//    do {
+//      context->reloadConfig = false;
+//      exitCode = obExecObInitTasks(context) ? EXIT_SUCCESS : EXIT_FAILURE;
+//      if (context->reloadConfig) {
+//        obLogI("Reloading configuration file due to the config-update job execution");
+//        maxReloads -= 1;
+//        loadContext(&context, &options);
+//        context->reloadConfig = true;
+//        config = &context->config;
+//      }
+//    } while (context->reloadConfig && config->enabled && maxReloads > 0);
+//  }
+
+
+
+  ObContext* context = NULL;
   int exitCode = EXIT_SUCCESS;
-
   size_t maxReloads = OB_MAX_CONFIG_RELOADS;
-  if (config->enabled) {
-    do {
-      context->reloadConfig = false;
+  do {
+    if (context && context->reloadConfig) {
+      obLogI("Reloading configuration file due to the config-update job execution");
+      maxReloads -= 1;
+    }
+
+    loadContext(&context, &options);
+    if (context->config.enabled) {
       exitCode = obExecObInitTasks(context) ? EXIT_SUCCESS : EXIT_FAILURE;
-      if (context->reloadConfig) {
-        obLogI("Reloading configuration file due to the config-update job execution");
-        maxReloads -= 1;
-        obLoadYamlConfig(config, options.configFile);
-        obLogObContext(context);
-      }
-    } while (context->reloadConfig && maxReloads > 0);
-  }
+    }
+  } while (maxReloads > 0
+           && context->reloadConfig
+           && context->config.enabled);
+
+
 
   obFreeObContext(&context);
 

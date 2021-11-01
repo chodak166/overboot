@@ -7,10 +7,13 @@
 #include "ob/ObLogging.h"
 #include "ObPaths.h"
 #include "ObOsUtils.h"
+#include "ObMount.h"
 
 #include "ObYamlLayerReader.h"
 
 #include <string.h>
+#include <dirent.h>
+#include <libgen.h>
 
 #define JOB_COMMIT_NAME "commit"
 #define JOB_UPDATE_CONFIG_NAME "update-config"
@@ -33,11 +36,72 @@ static bool obExecUpdateConfigJob(ObContext* context, const char* jobsDir)
   return result;
 }
 
-//static bool obExecInstallConfigJob(ObContext* context)
-//{
 
-//  return true;
-//}
+static bool obInstallParitalConfig(const char* jobPath, const char* dir)
+{
+  if (!dir || strlen(dir) == 0) {
+    obLogE("Configuration dir not set");
+    return false;
+  }
+
+  if (!obExists(dir)) {
+    obMkpath(dir, OB_MKPATH_MODE);
+  }
+
+  bool result = true;
+  sds nameBuffer = sdsnew(jobPath);
+  const char* name = basename(nameBuffer) + strlen(JOB_INSTALL_CONFIG_PREFIX) + 1;
+
+  sds partialConfigFile = sdsnew(dir);
+  partialConfigFile = sdscatfmt(partialConfigFile, "/%s", name);
+
+  obLogI("Installing partial config in %s", partialConfigFile);
+  result = obCopyFile(jobPath, partialConfigFile)
+      && obRemovePath(jobPath);
+
+  sdsfree(nameBuffer);
+  sdsfree(partialConfigFile);
+  return result;
+}
+
+static int configInstgallFilter(const struct dirent* entry)
+{
+  if (strncmp(entry->d_name, JOB_INSTALL_CONFIG_PREFIX,
+              strlen(JOB_INSTALL_CONFIG_PREFIX)) == 0) {
+    return 1;
+  }
+  return 0;
+}
+
+static bool obExecInstallConfigJob(ObContext* context, const char* jobsDir)
+{
+  bool result = true;
+  struct dirent **namelist;
+  int n = scandir(jobsDir, &namelist, configInstgallFilter, alphasort);
+  if (n == -1) {
+    obLogE("Cannot open directory: %s", jobsDir);
+    result = false;
+  }
+  else {
+    sds buffer = sdsnew(context->config.configPath);
+    char* configDirname = dirname(buffer);
+    sds configDirPath = sdsempty();
+    configDirPath = sdscatfmt(configDirPath, "%s/%s", configDirname, context->config.configDir);
+
+    for (int i = 0; i < n; ++i) {
+        sds fullPath = sdsempty();
+        fullPath = sdscatfmt(fullPath, "%s/%s", jobsDir, namelist[i]->d_name);
+        result = obInstallParitalConfig(fullPath, configDirPath) && result;
+        sdsfree(fullPath);
+        free(namelist[i]);
+    }
+    free(namelist);
+    sdsfree(buffer);
+    sdsfree(configDirPath);
+  }
+
+  return result;
+}
 
 //TODO: move?
 static bool commitUpperLayer(ObContext* context, const char* jobPath)
@@ -79,11 +143,13 @@ static bool commitUpperLayer(ObContext* context, const char* jobPath)
   return result;
 }
 
+
+
 static bool obExecCommitJob(ObContext* context, const char* jobsDir)
 {
+  bool result = true;
   sds jobPath = sdsnew(jobsDir);
   jobPath = sdscatfmt(jobPath, "/%s", JOB_COMMIT_NAME);
-  bool result = true;
 
   if (obExists(jobPath)) {
     obLogI("Commit job found in: %s", jobPath);
@@ -105,14 +171,30 @@ static bool obExecCommitJob(ObContext* context, const char* jobsDir)
 bool obExecPreInitJobs(ObContext* context)
 {
   sds jobsDir = obGetJobsPath(context);
-  obExecCommitJob(context, jobsDir);
-  obExecUpdateConfigJob(context, jobsDir);
-  sdsfree(jobsDir);
 
-  if (context->reloadConfig) {
-    obLogI("Configuration file requires reloading");
-    return false;
+  if (!obExists(jobsDir)) {
+    sdsfree(jobsDir);
+    return obMkpath(jobsDir, OB_MKPATH_MODE);
   }
 
-  return true;
+  //TODO: use only when needed
+  obRemountRw(context->root, NULL);
+
+  bool result = obExecCommitJob(context, jobsDir)
+           && obExecUpdateConfigJob(context, jobsDir);
+
+  if (context->reloadConfig) {
+    result = false;
+  }
+  else {
+    result = result && obExecInstallConfigJob(context, jobsDir);
+    if (result && context->reloadConfig) {
+      result = false;
+    }
+  }
+
+  obRemountRo(context->root, NULL);
+
+  sdsfree(jobsDir);
+  return result;
 }

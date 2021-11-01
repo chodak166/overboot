@@ -1,4 +1,5 @@
 enabled: true
+config_dir: "test-overboot.d"
 layers:
   visible: true
   device: "/dev/ob_test.img"
@@ -21,4 +22,3 @@ durables:
     - path: "/test/persistent_file_2"
       copy_origin: true
 
-#config_dir: "overboot.d"
