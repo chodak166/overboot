@@ -15,6 +15,7 @@ bool obIsFile(const char* path);
 bool obIsBlockDevice(const char* path);
 bool obIsDirectory(const char* path);
 bool obRemoveDirR(const char* path);
+bool obRemovePath(const char* path);
 bool obCreateBlankFile(const char* path);
 bool obCopyFile(const char* src, const char* dst);
 bool obSync(const char* src, const char* dst);

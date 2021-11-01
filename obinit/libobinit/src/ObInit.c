@@ -33,13 +33,11 @@ static OverlayPaths newOverlayPaths(const ObContext* context)
   paths.workPath = obGetOverlayWorkPath(context);
 
   paths.repoPath = sdsempty();
-  paths.repoPath = sdscatprintf(paths.repoPath, ""
+  paths.repoPath = sdscatfmt(paths.repoPath, ""
                                 "%s/%s", context->devMountPoint,
                                 context->config.repository);
 
-  paths.layersPath = sdsempty();
-  paths.layersPath = sdscatprintf(paths.layersPath, "%s/%s",
-                                  paths.repoPath, OB_LAYERS_DIR_NAME);
+  paths.layersPath = obGetLayersPath(context);
 
   paths.lowerPath = obGetLowerRootPath(context);
   paths.upperPath = obGetUpperPath(context);

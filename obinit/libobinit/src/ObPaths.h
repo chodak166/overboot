@@ -24,6 +24,10 @@ sds obGetBindedOverlayPath(const ObContext* context);
 
 sds obGetBindedLayersPath(const ObContext* context);
 
+sds obGetLayersPath(const ObContext* context);
+
+sds obGetJobsPath(const ObContext* context);
+
 sds obGetRootFstabPath(const char* rootmnt);
 
 sds obGetRootFstabBackupPath(const char* fstabPath);

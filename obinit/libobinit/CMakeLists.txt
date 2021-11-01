@@ -22,6 +22,7 @@ add_library(${TARGET} STATIC
   src/ObInitTasks.c
   src/ObPaths.c
   src/ObBlkid.c
+  src/ObJobs.c
 
   extern/sds/sds.c
   )

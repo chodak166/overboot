@@ -44,12 +44,7 @@ static int obRmPath(const char* path, const struct stat* sbuf, int type, struct 
   UNUSED(sbuf);
   UNUSED(type);
   UNUSED(ftwb);
-
-  if (remove(path) < 0) {
-    obLogE("Cannot remove %s: %s", path, strerror(errno));
-    return -1;
-  }
-  return 0;
+  return obRemovePath(path) ? 0 : -1;
 }
 
 static const char* syncSrcDir = NULL;
@@ -183,6 +178,16 @@ bool obRemoveDirR(const char* path)
   return nftw(path, obRmPath, 10, FTW_DEPTH | FTW_MOUNT | FTW_PHYS) >= 0;
 }
 
+
+bool obRemovePath(const char* path)
+{
+  if (remove(path) < 0) {
+    obLogE("Cannot remove %s: %s", path, strerror(errno));
+    return false;
+  }
+  return true;
+}
+
 bool obCreateBlankFile(const char* path)
 {
   if (!obEnsureParentExists(path)) {
@@ -219,6 +224,14 @@ bool obCopyFile(const char* src, const char* dst)
   }
 
   off_t len = stat.st_size;
+
+
+  char dname[OB_PATH_MAX];
+  strcpy(dname, dst);
+  dirname(dname);
+  if (!obExists(dname)) {
+    obMkpath(dname, OB_MKPATH_MODE);
+  }
 
   int fdOut = open(dst, O_CREAT | O_WRONLY | O_TRUNC, 0644);
   if (fdOut == -1) {

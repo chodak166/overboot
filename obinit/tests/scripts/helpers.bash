@@ -60,6 +60,8 @@ TEST_INNER_DEV_DIR="$TEST_ROOTMNT_DIR/var/obdev"
 TEST_INNER_LAYER_NAME="internal-test-layer"
 TEST_INNER_LAYER_DIR="$TEST_INNER_DEV_DIR/$TEST_OB_REPOSITORY_NAME/layers/$TEST_INNER_LAYER_NAME"
 
+TEST_JOBS_DIR_NAME="jobs"
+
 TEST_MAX_NESTED_MOUNTS=4
 
 test_setupFakeRamfsRoot() {
@@ -106,6 +108,7 @@ test_createOverbootDeviceImage() {
 
   mkdir -p "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME"
   cp -r "$TEST_RES_DIR/layers" "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/"
+  mkdir -p "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME"
   sync
   umount -fl "$TEST_MNT_DIR"
 }

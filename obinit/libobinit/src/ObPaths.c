@@ -62,6 +62,12 @@ sds obGetBindedOverlayPath(const ObContext* context)
                       context->root, OB_USER_BINDINGS_DIR);
 }
 
+sds obGetJobsPath(const ObContext* context)
+{
+  sds path = obGetRepoPath(context);
+  path = sdscatfmt(path, "/%s", OB_JOBS_DIR_NAME);
+  return path;
+}
 
 sds obGetBindedLayersPath(const ObContext* context)
 {
@@ -69,6 +75,12 @@ sds obGetBindedLayersPath(const ObContext* context)
   sds bindedLayersDir = sdsnew(bindedOverlay);
   sdsfree(bindedOverlay);
   return sdscat(bindedLayersDir, "/layers");
+}
+
+sds obGetLayersPath(const ObContext* context)
+{
+  sds path = obGetRepoPath(context);
+  return sdscatfmt(path, "/%s", OB_LAYERS_DIR_NAME);
 }
 
 sds obGetRootFstabPath(const char* rootmnt)
@@ -82,3 +94,5 @@ sds obGetRootFstabBackupPath(const char* fstabPath)
   sds backupPath = sdsnew(fstabPath);
   return sdscat(backupPath, ".orig");
 }
+
+

@@ -62,6 +62,11 @@
 #define OB_USER_BINDINGS_DIR "/overboot"
 #endif
 
+#ifndef OB_JOBS_DIR_NAME
+#define OB_JOBS_DIR_NAME "jobs"
+#endif
+
+
 #ifndef OB_LAYERS_DIR_NAME
 #define OB_LAYERS_DIR_NAME "layers"
 #endif

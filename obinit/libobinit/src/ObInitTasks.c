@@ -9,6 +9,7 @@
 #include "ObDeinit.h"
 #include "ob/ObInit.h"
 #include "ob/ObLogging.h"
+#include "ob/ObJobs.h"
 #include <stdlib.h>
 
 static bool checkRollback(ObContext* context)
@@ -23,6 +24,11 @@ static ObTaskListPtr createObInitTaskList(ObContext* context)
 
   task = obCreateTask((ObTaskFunction)obInitPersistentDevice,
                       (ObTaskFunction)obDeinitPersistentDevice,
+                      context);
+  obAppendTask(tasks, task);
+
+  task = obCreateTask((ObTaskFunction)obExecPreInitJobs,
+                      NULL,
                       context);
   obAppendTask(tasks, task);
 
