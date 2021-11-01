@@ -16,11 +16,22 @@
 #define JOB_UPDATE_CONFIG_NAME "update-config"
 #define JOB_INSTALL_CONFIG_PREFIX "install-config"
 
-//static bool obExecUpdateConfigJob(ObContext* context)
-//{
+static bool obExecUpdateConfigJob(ObContext* context, const char* jobsDir)
+{
+  sds jobPath = sdsnew(jobsDir);
+  jobPath = sdscatfmt(jobPath, "/%s", JOB_UPDATE_CONFIG_NAME);
+  bool result = true;
 
-//  return true;
-//}
+  if (obExists(jobPath)) {
+    obLogI("Config update job found in: %s", jobPath);
+    result = obCopyFile(jobPath, context->config.configPath);
+    result = obRemovePath(jobPath) && result;
+    context->reloadConfig = true;
+  }
+
+  sdsfree(jobPath);
+  return result;
+}
 
 //static bool obExecInstallConfigJob(ObContext* context)
 //{
@@ -56,6 +67,11 @@ static bool commitUpperLayer(ObContext* context, const char* jobPath)
     path = sdscat(path, OB_LAYER_INFO_PATH);
     result = result && obCopyFile(jobPath, path);
     sdsfree(path);
+
+    if (result) {
+      result = obRemoveDirR(upperPath);
+      obMkpath(upperPath, OB_MKPATH_MODE);
+    }
   }
 
   sdsfree(upperPath);
@@ -90,9 +106,13 @@ bool obExecPreInitJobs(ObContext* context)
 {
   sds jobsDir = obGetJobsPath(context);
   obExecCommitJob(context, jobsDir);
-
-  //*reload = false;
-
+  obExecUpdateConfigJob(context, jobsDir);
   sdsfree(jobsDir);
+
+  if (context->reloadConfig) {
+    obLogI("Configuration file requires reloading");
+    return false;
+  }
+
   return true;
 }

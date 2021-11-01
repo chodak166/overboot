@@ -26,6 +26,7 @@ typedef struct ObConfig
   char repository[OB_PATH_MAX];
   char configDir[OB_PATH_MAX];
   char tmpfsSize[16];
+  const char* configPath;
 
   bool enabled;
   bool bindLayers;

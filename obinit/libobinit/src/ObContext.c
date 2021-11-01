@@ -62,6 +62,7 @@ void obInitializeObContext(ObContext* context, const char* prefix)
   }
 
   context->dirAsDevice = false;
+  context->reloadConfig = false;
 }
 
 ObContext* obCreateObContext(const char* prefix)

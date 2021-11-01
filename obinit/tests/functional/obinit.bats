@@ -349,41 +349,50 @@ vgRun()
 
 # --- jobs ---
 
-# @test "obinit should update the configuration file on update-config job" {
+@test "obinit should update the configuration file on update-config job" {
 
-#   oldConfig="$TEST_TMP_DIR/overboot.yaml"
-#   newConfig="$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
-#   jobFile="$TEST_JOBS_DIR/update-config"
+  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
-#   cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$oldConfig"
-#   cp "$newConfig" "$jobFile"
+  oldConfig="$TEST_TMP_DIR/overboot.yaml"
+  newConfig="$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
+  jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/update-config"
 
-#   oldConfigSum=$(md5sum "$oldConfig" | awk '{print $1}')
-#   newConfigSum=$(md5sum "$newConfig" | awk '{print $1}')
+  cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$oldConfig"
+  cp "$newConfig" "$jobFile"
 
-#   [[ $oldConfigSum != $newConfigSum ]]
+  oldConfigSum=$(md5sum "$oldConfig" | awk '{print $1}')
+  newConfigSum=$(md5sum "$newConfig" | awk '{print $1}')
 
-#   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$oldConfig"
+  [[ $oldConfigSum != $newConfigSum ]]
+
+  umount "$TEST_MNT_DIR"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$oldConfig"
    
-#   oldConfigSum=$(md5sum "$oldConfig" | awk '{print $1}')
-#   [[ $oldConfigSum == $newConfigSum ]]
-#   [ ! -f "$jobFile" ]
-# }
+  oldConfigSum=$(md5sum "$oldConfig" | awk '{print $1}')
 
-# @test "obinit should load and apply the new configuration after the update-config job is finished" {
+  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
+  [[ $oldConfigSum == $newConfigSum ]]
+  [ ! -f "$jobFile" ]
+}
 
-#   oldConfig="$TEST_TMP_DIR/overboot.yaml"
-#   newConfig="$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
-#   jobFile="$TEST_JOBS_DIR/update-config"
+@test "obinit should load and apply the new configuration after the update-config job is finished" {
 
-#   cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$oldConfig"
-#   cp "$newConfig" "$jobFile"
+  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
-#   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$oldConfig"
+  oldConfig="$TEST_TMP_DIR/overboot.yaml"
+  newConfig="$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
+  jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/update-config"
+
+  cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$oldConfig"
+  cp "$newConfig" "$jobFile"
+
+  umount "$TEST_MNT_DIR"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$oldConfig"
    
-#   [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
-#   [ ! -f "$jobFile" ]
-# }
+  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
+  [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
+  [ ! -f "$jobFile" ]
+}
 
 # @test "obinit should copy new partial configuration file to config directory on install-config job" {
 
@@ -418,20 +427,18 @@ vgRun()
   testValue=$RANDOM
   echo $testValue > "$upperTestFile"
   
-  jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/jobs/commit"
-
+  jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/commit"
   layerName="new-layer-$RANDOM"
   echo "name: $layerName" > "$jobFile"
   jobFileSum=$(md5sum "$jobFile" | awk '{print $1}')
-  
-  sync -f "$TEST_TMP_DIR"
+
   umount "$TEST_MNT_DIR"
-  
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml"
 
-  newLayer="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers"/$layerName
+  newLayer="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers/$layerName"
   layerMetaFileSum=$(md5sum "$newLayer/root/etc/layer.yaml" | awk '{print $1}')
 
+  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
   [ -d "$newLayer" ]
   [ ! -f "$upperTestFile" ]
   [[ $(cat "$newLayer/root/$testFileName") == $testValue ]]

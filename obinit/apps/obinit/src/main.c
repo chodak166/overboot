@@ -23,6 +23,7 @@
 # define OB_LOG_USE_KMSG false
 #endif
 
+#define OB_MAX_CONFIG_RELOADS 8
 
 int main(int argc, char* argv[])
 {
@@ -40,8 +41,18 @@ int main(int argc, char* argv[])
 
   int exitCode = EXIT_SUCCESS;
 
-  if (config->enabled && !obExecObInitTasks(context)) {
-    exitCode = EXIT_FAILURE;
+  size_t maxReloads = OB_MAX_CONFIG_RELOADS;
+  if (config->enabled) {
+    do {
+      context->reloadConfig = false;
+      exitCode = obExecObInitTasks(context) ? EXIT_SUCCESS : EXIT_FAILURE;
+      if (context->reloadConfig) {
+        obLogI("Reloading configuration file due to the config-update job execution");
+        maxReloads -= 1;
+        obLoadYamlConfig(config, options.configFile);
+        obLogObContext(context);
+      }
+    } while (context->reloadConfig && maxReloads > 0);
   }
 
   obFreeObContext(&context);

@@ -131,5 +131,6 @@ bool obLoadYamlConfig(ObConfig* config, const char* path)
     result = loadYamlConfigDir(config, path);
   }
 
+  config->configPath = path;
   return result;
 }

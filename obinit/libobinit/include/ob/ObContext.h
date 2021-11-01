@@ -20,6 +20,7 @@ typedef struct ObContext
   char* overbootDir;
   char* root;
   bool dirAsDevice;
+  bool reloadConfig;
 } ObContext;
 
 /**

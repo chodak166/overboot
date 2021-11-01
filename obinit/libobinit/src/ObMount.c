@@ -102,6 +102,7 @@ bool obMountLocalRepository(const char* repoPath, const char* mountPoint)
 
 bool obUnmount(const char* path)
 {
+  obLogI("Unmounting %s", path);
   int result = umount2(path, MNT_DETACH);
   if (result != 0) {
     obLogE("Cannot unmount %s: %s", path, strerror(errno));
