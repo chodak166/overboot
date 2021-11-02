@@ -63,9 +63,9 @@ buildObinit()
     -v "$OBINIT_DIR":"$OBINIT_DIR" \
     -v "$OBINIT_DIR/../cmake":"$OBINIT_DIR/../cmake" \
     $DOCKER_BUILD_IMAGE /bin/bash -c <<EOC \
-" [ -d '$OBINIT_BUILD_DIR' ] || mkdir '$OBINIT_BUILD_DIR'; \
+" [ -d '$OBINIT_BUILD_DIR' ] && rm -r '$OBINIT_BUILD_DIR'; mkdir '$OBINIT_BUILD_DIR'; \
 cd '$OBINIT_BUILD_DIR' && \
-cmake -DOB_BUILD_TESTS=OFF '$OBINIT_DIR' && \
+cmake -DOB_BUILD_TESTS=OFF -DPROJECT_VERSION_SUFFIX=-$(git rev-parse --short HEAD) '$OBINIT_DIR' && \
 cmake --build . -- -j4"
 EOC
 }
@@ -93,7 +93,7 @@ installObinit()
   cp -v "$OBINIT_BIN" "$mntDir/usr/bin/"
 
   echo -n "Unmounting qcow2 drive... "
-  umount "$mntDir"
+  umount -lf "$mntDir"
   rmdir "$mntDir"
   echo "done"
   sleep 1s
@@ -105,10 +105,10 @@ initObRepository()
   mkdir "$mntDir"
   mount "$VM_DIR/data.img" "$mntDir"
 
-  mkdir "$mntDir/overboot" ||:
+  mkdir "$mntDir/overboot" 2>/dev/null ||:
   cp -r "$OBINIT_DIR/tests/functional/res/layers" "$mntDir/overboot/"
 
-  umount "$mntDir"
+  umount -lf "$mntDir"
   rmdir "$mntDir"
 }
 

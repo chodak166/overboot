@@ -4,7 +4,7 @@
 // https://www.boost.org/LICENSE_1_0.txt for the full license.
 
 #include "ObArgParser.h"
-#include "version.h"
+#include "Version.h"
 
 #include "ob/ObLogging.h"
 
@@ -19,7 +19,7 @@
 
 static void printVersion()
 {
-  char buffer[12];
+  char buffer[24];
   printf("%s %s\n", APP_NAME, getVersionString(buffer));
 }
 

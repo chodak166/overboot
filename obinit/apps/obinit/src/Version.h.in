@@ -1,0 +1,28 @@
+/* Copyright (c) 2021 Platforma Biznesu sp. z o. o.
+ *
+ * All rights reserved. Reproduction or distribution,
+ * in whole or in part, is forbidden except by explicit
+ * permission of Platforma Biznesu sp. z o. o.
+ *
+ * File maintained by: Łukasz Chodyła
+ */
+
+#ifndef VERSION_H_IN
+#define VERSION_H_IN
+
+#include <stdio.h>
+#include <inttypes.h>
+
+const uint8_t VERSION_MAJOR = ${PROJECT_VERSION_MAJOR};
+const uint8_t VERSION_MINOR = ${PROJECT_VERSION_MINOR};
+const uint8_t VERSION_PATCH = ${PROJECT_VERSION_PATCH};
+const char* VERSION_SUFFIX = "${PROJECT_VERSION_SUFFIX}";
+
+static char* getVersionString(char* buffer) {
+  sprintf(buffer, "%d.%d.%d%s",
+          VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH,
+          VERSION_SUFFIX);
+  return buffer;
+}
+
+#endif // VERSION_H_IN

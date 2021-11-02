@@ -27,7 +27,10 @@ static bool obExecUpdateConfigJob(ObContext* context, const char* jobsDir)
 
   if (obExists(jobPath)) {
     obLogI("Config update job found in: %s", jobPath);
+    obRemountRw(context->root, NULL);
     result = obCopyFile(jobPath, context->config.configPath);
+    obRemountRo(context->root, NULL);
+
     result = obRemovePath(jobPath) && result;
     context->reloadConfig = true;
   }
@@ -88,6 +91,7 @@ static bool obExecInstallConfigJob(ObContext* context, const char* jobsDir)
     sds configDirPath = sdsempty();
     configDirPath = sdscatfmt(configDirPath, "%s/%s", configDirname, context->config.configDir);
 
+    obRemountRw(context->root, NULL);
     for (int i = 0; i < n; ++i) {
         sds fullPath = sdsempty();
         fullPath = sdscatfmt(fullPath, "%s/%s", jobsDir, namelist[i]->d_name);
@@ -95,6 +99,8 @@ static bool obExecInstallConfigJob(ObContext* context, const char* jobsDir)
         sdsfree(fullPath);
         free(namelist[i]);
     }
+    obRemountRo(context->root, NULL);
+
     free(namelist);
     sdsfree(buffer);
     sdsfree(configDirPath);
@@ -170,15 +176,14 @@ static bool obExecCommitJob(ObContext* context, const char* jobsDir)
 
 bool obExecPreInitJobs(ObContext* context)
 {
+  obLogI("Looking for pre-init jobs to be executed");
   sds jobsDir = obGetJobsPath(context);
 
   if (!obExists(jobsDir)) {
+    bool result = obMkpath(jobsDir, OB_MKPATH_MODE);
     sdsfree(jobsDir);
-    return obMkpath(jobsDir, OB_MKPATH_MODE);
+    return result;
   }
-
-  //TODO: use only when needed
-  obRemountRw(context->root, NULL);
 
   bool result = obExecCommitJob(context, jobsDir)
            && obExecUpdateConfigJob(context, jobsDir);
@@ -192,8 +197,6 @@ bool obExecPreInitJobs(ObContext* context)
       result = false;
     }
   }
-
-  obRemountRo(context->root, NULL);
 
   sdsfree(jobsDir);
   return result;

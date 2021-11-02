@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(obinit-bin LANGUAGES C VERSION 0.1.0)
+project(obinit-bin LANGUAGES C VERSION 0.1.1)
 
 set(C_STANDARD 11)
 set(TARGET obinit-bin)
@@ -8,7 +8,7 @@ set(OUTPUT_NAME obinit)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-configure_file(src/version.h.in version.h)
+configure_file(src/Version.h.in Version.h)
 
 option(OB_LOG_STDOUT "Write logs to stdout" ON)
 option(OB_LOG_KMSG "Write logs to /dev/kmsg" ON)

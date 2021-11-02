@@ -148,6 +148,8 @@ bool obInitPersistentDevice(ObContext* context)
 
 bool obInitOverbootDir(ObContext* context)
 {
+  obLogI("Initializing overboot working directory");
+
   ObConfig* config = &context->config;
   if (!obPrepareOverlay(context)) {
     obLogE("Cannot prepare overboot dir (%s)", context->overbootDir);
@@ -168,6 +170,10 @@ bool obInitOverbootDir(ObContext* context)
 
 bool obInitLowerRoot(ObContext* context)
 {
+  if (!context->dirAsDevice) {
+    obRemountRo(context->root, NULL);
+  }
+
   bool result = true;
   sds lowerPath = obGetLowerRootPath(context);
 
