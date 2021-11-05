@@ -274,6 +274,7 @@ bool obBlockByTmpfs(const char* path)
 
 bool obRemountRw(const char* path, void* data)
 {
+  obLogI("Remounting (RW) %s", path);
   if (mount("", path, "", MS_REMOUNT, data) != 0) {
     obLogE("Remounting (RW) %s failed: ", path, strerror(errno));
     return false;
@@ -283,6 +284,7 @@ bool obRemountRw(const char* path, void* data)
 
 bool obRemountRo(const char* path, void* data)
 {
+  obLogI("Remounting (RO) %s", path);
   if (mount("", path, "", MS_REMOUNT | MS_RDONLY, data) != 0) {
     obLogE("Remounting (RO) %s failed: ", path, strerror(errno));
     return false;

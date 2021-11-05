@@ -59,6 +59,14 @@ mirror=http://deb.debian.org/debian
 rootPassword=debian
 noBoot=false
 
+if [ -z "$DATA_IMG_SIZE" ]; then
+  DATA_IMG_SIZE=500M
+fi
+
+if [ -z "$VM_MEM_SIZE" ]; then
+  VM_MEM_SIZE=512
+fi
+
 #===========================================
 
 
@@ -242,7 +250,7 @@ function createQemuOverlay
 function createDataFile
 {
   dataFile="$1"
-  head -c 50M /dev/zero > "$dataFile"
+  head -c $DATA_IMG_SIZE /dev/zero > "$dataFile"
   mke2fs -t ext4 "$dataFile"
 }
 
@@ -283,7 +291,7 @@ function runImage
   fi
 
   cmd="qemu-system-x86_64 \\
-       -m 256 \\
+       -m ${VM_MEM_SIZE} \\
        -cpu host \\
        -drive file=${overlayFile},format=qcow2,media=disk \\
        -drive file=${dataFile},format=raw,media=disk \\

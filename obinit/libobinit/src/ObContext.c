@@ -17,6 +17,8 @@
 static const char* ROOTMNT_ENV_VAR = "rootmnt";
 static const char* DEFAULT_ROOTMNT = "/root";
 static const char* DEFAULT_TMPFS_SIZE = "50%";
+static const char* DEFAULT_DEVICE_PATH = "/var/obdev";
+static const char* DEFAULT_HEAD_LAYER = "root";
 static const char* DEFAULT_REPO_NAME = "overboot";
 static const char* DEFAULT_CONFIG_DIR = "overboot.d";
 
@@ -33,8 +35,8 @@ void obInitializeObContext(ObContext* context, const char* prefix)
 {
   ObConfig* config = &context->config;
   strcpy(config->prefix, prefix);
-  strcpy(config->devicePath, "");
-  strcpy(config->headLayer, "");
+  strcpy(config->devicePath, DEFAULT_DEVICE_PATH);
+  strcpy(config->headLayer, DEFAULT_HEAD_LAYER);
   strcpy(config->repository, DEFAULT_REPO_NAME);
   strcpy(config->configDir, DEFAULT_CONFIG_DIR);
   strcpy(config->tmpfsSize, DEFAULT_TMPFS_SIZE);

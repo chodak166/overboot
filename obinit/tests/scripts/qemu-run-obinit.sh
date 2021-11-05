@@ -91,6 +91,8 @@ installObinit()
 
   cp -v "$OBINIT_CONFIG" "$mntDir/etc/overboot.yaml"
   cp -v "$OBINIT_BIN" "$mntDir/usr/bin/"
+  cp -v "$OBINIT_DIR/apps/obinit/system/usr/bin/obhelper" "$mntDir/usr/bin/obhelper"
+  chmod +x "$mntDir/usr/bin/obhelper"
 
   echo -n "Unmounting qcow2 drive... "
   umount -lf "$mntDir"

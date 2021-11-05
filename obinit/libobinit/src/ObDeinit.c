@@ -75,13 +75,17 @@ bool obDeinitOverlayfs(ObContext* context)
 bool obDeinitManagementBindings(ObContext* context)
 {
   sds bindedOverlay = obGetBindedOverlayPath(context);
-  sds bindedLayersDir = obGetBindedLayersPath(context);
+  sds bindedLayersDir = obGetBindedLayersPath(bindedOverlay);
+  sds bindedJobsDir = obGetBindedJobsPath(bindedOverlay);
 
-  bool result = obUnmount(bindedLayersDir);
+  bool result = obUnmount(bindedJobsDir);
+  result = rmdir(bindedJobsDir) && result;
+  result = obUnmount(bindedLayersDir) && result;
   result = rmdir(bindedLayersDir) && result;
   result = obUnmount(bindedOverlay) && result;
   result = rmdir(bindedOverlay) && result;
 
+  sdsfree(bindedJobsDir);
   sdsfree(bindedLayersDir);
   sdsfree(bindedOverlay);
   return result;

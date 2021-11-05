@@ -1,0 +1,491 @@
+#!/bin/bash
+# Copyright (c) 2021  Lukasz Chodyla
+# Distributed under the Boost Software License v1.0.
+# See accompanying file LICENSE.txt or copy at
+# https://www.boost.org/LICENSE_1_0.txt for the full license.
+
+## $SCRIPT_NAME $SCRIPT_VERSION
+##
+## Usage: $SCRIPT_FILENAME [command] [[options]]
+##
+## $SCRIPT_NAME is a simple overboot helper script created for diagnostic and
+## administrative purposes. Please use the "obctl" utility instead if your 
+## system has it installed.
+##
+## Commands:
+##
+## status (default) - show current overboot status
+##
+## config           - edit the configuration file
+##
+## commit           - create new layer from the last persistent upper layer
+##
+## log              - print obinit logs
+##
+## hwreboot         - force instant reboot (not recomended with non-tmpfs upper layer)
+##
+## hwpoweroff       - force instant shutdown (not recomended with non-tmpfs upper layer)
+##
+## clean            - cancel all jobs scheduled for execution on the next boot
+##
+## *OPTIONS*
+##
+## Global options:
+##   -r, --root                     Root file system ("${rootfs}" by default)
+##   -y, --yes                      Say yes to prompts
+##   -D, --debug                    Run in debug mode
+##   -h, --help                     Display this message
+##   -v, --version                  Display script version
+##
+
+#===========================================
+
+SCRIPT_NAME=obhelper
+SCRIPT_FILENAME=$(basename "$0")
+SCRIPT_VERSION=0.1.0
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+set -e          # exit on command errors (so you MUST handle exit codes properly!)
+set -o pipefail # capture fail exit codes in piped commands
+#set -x          # execution tracing debug messages
+
+RED='\033[0;31m'
+GREEN='\033[1;32m'
+NC='\033[0m' # No Color
+
+STDOUT=`readlink -f /proc/$$/fd/1`
+STDERR=`readlink -f /proc/$$/fd/2`
+
+EDIT_COMMANDS=(micro nano vim vi editor)
+
+args=($@)
+commandName=status
+allYes=false
+rootfs=/
+
+obRunning=false
+obActiveLayers=()
+
+MTAB_FILE=/etc/mtab
+OVERBOOT_DIR=/overboot
+JOBS_DIR=$OVERBOOT_DIR/jobs
+LAYERS_DIR=$OVERBOOT_DIR/layers
+OB_CONFIG_FILE=/etc/overboot.yaml
+OB_LR_CONFIG_FILE=$OVERBOOT_DIR/lower-root${OB_CONFIG_FILE}
+
+#===========================================
+
+
+usage()
+{
+  exitCode=$1
+  test -z $exitCode && exitCode=0
+
+  sed -n '/^##/,/^$/s/^## \{0,1\}//p' "$SCRIPT_DIR/$SCRIPT_FILENAME" |
+  sed "s/\$SCRIPT_NAME/$SCRIPT_NAME/g" |
+  sed "s/\$SCRIPT_FILENAME/$SCRIPT_FILENAME/g" |
+  sed "s/\$SCRIPT_VERSION/$SCRIPT_VERSION/g"
+
+  exit $exitCode
+} 2>/dev/null
+
+main() {
+    readCommandArg
+    readOptions
+    run
+}
+
+readCommandArg()
+{
+  set -- "${args[@]}"
+  local arg=$1
+  local firstChar=${arg:0:1}
+
+  if [ "$firstChar" != "-" ] && [ ! -z "$arg" ]; then
+    commandName=$arg
+    shift
+    args=($@)
+  fi
+}
+
+readOptions()
+{
+  set -- "${args[@]}"
+
+  while [ $# -gt 0 ]; do
+    case $1 in
+      ('-h'|'--help')
+        usage 0 2>&1;;
+      ('-v'|'--version')
+        echo "$SCRIPT_NAME $SCRIPT_VERSION"
+        exit 0;;
+      ('-y'|'--yes')
+        allYes=true;;
+      ('-r'|'--root')
+        shift
+        rootfs="$1";;
+      ('-D'|'--debug')
+        PS4='- Line ${LINENO}: '
+        set -x;;
+      ('--')
+        shift
+        break;;
+      ('-'*)
+        echo -e "\n$0 $1: unknown option. Use --help to learn more.\n"
+        exit 3
+        break;;
+      (*)
+        usage 1;;
+    esac
+
+    shift
+  done
+}
+
+
+#========== cli functions ==========
+
+run()
+{
+  trap cleanup EXIT
+
+  obParseMtab
+
+  case $commandName in
+    ('status')
+      obStatusCmd;;
+    ('config')
+      obConfigCmd;;
+    ('commit')
+      obCommitCmd;;
+    ('clean')
+      obCleanCmd;;
+    ('log')
+      obLogCmd;;
+    ('list')
+      obListLayersCmd;;
+    ('switch')
+      obSwitchHeadCmd;;
+    ('hwpoweroff')
+      obHwPoweroffCmd;;
+    ('hwreboot')
+      obHwRebootCmd;;
+    (*)
+      echo "Unknown command: $commandName"
+      exit 1
+  esac
+}
+
+cleanup()
+{
+  local retCode=$?
+
+  if [ $retCode -ne 0 ]; then
+    echo "Finished with errors, try --debug to investigate what went wrong"
+  fi
+
+  exit $retCode
+}
+
+assertRoot()
+{
+  if [[ $EUID -ne 0 ]]; then
+    echo "This command is meant to be executed as root user"
+    exit 1
+  fi
+}
+
+assertRunning()
+{
+  if [ ! $obRunning = true ]; then
+    echo "Cannot execute command: overboot seems to be disabled"
+    exit 1
+  fi
+}
+
+function confirm {
+
+  if [ $allYes = true ]; then
+    return 0
+  fi
+
+  local text=$1
+  local c=''
+  while [[ "$c" != "n" ]] && [[ "$c" != "y" ]]; do
+    echo -en "${text} [y/n]: "
+    read c
+  done
+
+  if [ "$c" == "y" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+
+obParseMtab()
+{
+  local mtabPath="${rootfs}${MTAB_FILE}"
+
+  local rootEntry=$(awk '{if($2=="/")print $0}' "$mtabPath")
+  if [ -z "$rootEntry" ]; then
+    echo "Root (/) entry not found in $mtabPath"
+    exit 1
+  fi
+
+  local device=$(echo $rootEntry | awk '{print $1}')
+  
+  if [[ "$device" == "overlay" ]]; then
+    obRunning=true
+
+    regex="lowerdir=([^,]+)"
+    if [[ "$rootEntry" =~ $regex ]]; then
+      lowerLayers=${BASH_REMATCH[1]}
+      IFS=:
+      obActiveLayers=($lowerLayers)
+      unset IFS
+
+      for i in "${!obActiveLayers[@]}"; do
+        bname=$(basename ${obActiveLayers[$i]})
+        if [[ "$bname" == "root" ]]; then
+          obActiveLayers[$i]=$(basename $(dirname ${obActiveLayers[$i]}))
+        else
+          obActiveLayers[$i]="root"
+        fi
+      done
+    else
+      echo "Cannot parse overlay MTAB entry"
+    fi
+  fi
+
+}
+
+obStatusCmd()
+{
+  echo -ne "Status: "
+
+  if [ $obRunning = true ]; then
+    echo -e "${GREEN}RUNNING${NC}"
+    obPrintActiveLayers
+  else
+    echo -e "${RED}NOT RUNNING${NC}"
+  fi
+
+}
+
+obPrepareConfigUpdateJobFile()
+{
+  local lrConfigFile="${rootfs}${OB_LR_CONFIG_FILE}"
+
+  if [ ! -f "$lrConfigFile" ]; then
+    echo -e "\n${RED}ERROR: configuration file not found ($lrConfigFile)${NC}\n"
+    exit 1
+  fi
+
+  local jobFile="${rootfs}${JOBS_DIR}/update-config"
+  mkdir -p $(dirname "$jobFile") ||:
+  [ -f "$jobFile" ] || cp "$lrConfigFile" "$jobFile"
+  echo "$jobFile"
+}
+
+obConfigCmd()
+{
+  if [ $obRunning = true ]; then
+    
+    local jobFile="$(obPrepareConfigUpdateJobFile)"
+    obUserEditFile "$jobFile"
+    if [ $edited = true ]; then
+      echo -e "\n${GREEN}Configuration update has been scheduled for the next boot${NC}\n"
+    else
+      echo -e "\nCannot edit the job file: $jobFile"
+    fi
+      
+  else
+    local configFile="${rootfs}$OB_CONFIG_FILE"
+    obUserEditFile "$configFile"
+    if [ $edited = true ]; then
+       echo -e "\n${GREEN}Configuration file has been updated. All the changes will be applied on the next boot${NC}\n"
+    else
+      echo -e "\nCannot edit the configuration file: $configFile"
+    fi
+  fi
+}
+
+obPrintActiveLayers()
+{
+  echo "Active layers:"
+  
+  local n=${#obActiveLayers[@]}
+  for i in "${!obActiveLayers[@]}"; do
+    echo "[$(($n-$i))] ${obActiveLayers[$i]}"
+  done
+}
+
+obUserEditFile()
+{
+  local file="$1"
+  edited=false
+  for editor in ${EDIT_COMMANDS[@]}; do
+    if command -v $editor &>/dev/null; then
+      $editor $file
+      edited=true
+      break
+    fi
+  done
+}
+
+obCommitCmd()
+{
+  assertRunning
+
+  local nowTsUtc=$(date -u +%Y-%m-%dT%H:%M:%S)
+  local underlayer=${obActiveLayers[0]}
+
+  echo -en "\nNew layer name: "
+  read layerName
+
+  echo -en "\nNew layer description: "
+  read layerDesc
+
+  echo -en "\nAuthor name: "
+  read author
+
+  local meta=$(cat << EOF
+name:         "$layerName"
+description:  "$layerDesc"
+underlayer:   "$underlayer"
+author:       "$author"
+create_ts:    "$nowTsUtc"
+EOF
+)
+
+  echo -e "\n$meta"
+
+  if confirm "\nProceed?"; then
+    local jobFile=${rootfs}${JOBS_DIR}/commit
+    mkdir -p $(dirname "$jobFile") ||:
+    echo "$meta" > "$jobFile"
+    echo -e "\n${GREEN}Upper layer commit has been scheduled for the next boot${NC}\n"
+
+    #TODO replace old layer (w/o .xxx) in head: line in config file
+    if confirm "\nUpdate configuration file to use the new layer?"; then
+      obUpdateHeadLayer "$layerName"
+    fi
+  fi
+}
+
+obUpdateHeadLayer()
+{
+  local layerName="$1"
+  local jobFile="$(obPrepareConfigUpdateJobFile)"
+  str=$(cat "$jobFile")
+
+  re="(\s+head\s*:\s*)(\S+)"
+  if [[ "$str" =~ $re ]]; then
+    escapedMatch=$(printf '%s\n' "${BASH_REMATCH[0]}" | sed -e 's/[\"]/\\"/g')
+    escapedMatch="${escapedMatch#"${escapedMatch%%[![:space:]]*}"}" # remove leading whitespace
+    escapedMatch="${escapedMatch%"${escapedMatch##*[![:space:]]}"}" # remove trailing whitespace
+    sed -i "s/$escapedMatch/head: \"$layerName\"/g" "$jobFile"
+    echo -e "\n${GREEN}Head layer update has been scheduled for the next boot${NC}\n"
+  else
+    echo "Cannot find 'head' entry in $jobFile"
+  fi
+}
+
+obLogCmd()
+{
+  if command -v journalctl &>/dev/null; then
+    journalctl --output cat | grep -i obinit
+  elif command -v dmesg &>/dev/null; then
+    dmesg --notime | grep -i obinit
+  else
+    echo "Cannot print obinit logs: journalctl/dmesg not found"
+  fi
+}
+
+obCleanCmd()
+{
+  assertRunning
+
+  if confirm "Do you want to remove all the jobs scheduled for the next boot?"; then
+    local jobsDir="${rootfs}${JOBS_DIR}"
+    local jobCount=$(ls -1 $jobsDir/ 2>/dev/null | wc -l)
+    rm "$jobsDir"/* 2>/dev/null ||:
+    echo -e "\n$jobCount job(s) removed\n"
+  fi
+}
+
+obListLayersCmd()
+{
+  assertRunning
+
+  local layersDir="${rootfs}${LAYERS_DIR}"
+  if [ ! -d "$layersDir" ]; then
+    echo "Layers dir not found: $layersDir"
+    return 1
+  fi
+
+  obFindLayers "$layersDir"
+  
+  echo "Available layers:"
+  for i in "${!ALL_LAYERS[@]}"; do
+    echo "[$i] ${ALL_LAYERS[$i]}"
+  done
+
+}
+
+obFindLayers()
+{
+  local layersDir="$1"
+  ALL_LAYERS=()
+
+  OIFS="$IFS"
+  IFS=$'\n'
+  for layer in `find "$layersDir" \( -iname "*.obld" -o -iname "*.obli" \) -printf "%T@ %p\n" | sort -n`  
+  do
+      layer=$(basename "$layer")
+      ALL_LAYERS[${#ALL_LAYERS[@]}]="$layer"
+  done
+  ALL_LAYERS[${#ALL_LAYERS[@]}]="root"
+  IFS="$OIFS"
+}
+
+obSwitchHeadCmd()
+{
+  obListLayersCmd
+
+  if [ ${#ALL_LAYERS[@]} -eq 0 ]; then
+    echo "No layers found"
+    return 1
+  fi
+
+  echo -en "\nSelect new head layer number (0-$((${#ALL_LAYERS[@]}-1))): "
+  read n
+
+  if [ $n -ge 0 ] && [ $n -lt ${#ALL_LAYERS[@]} ]; then
+    local layer="${ALL_LAYERS[$n]}"
+    local layer="${layer%.*}"
+    echo "New head: $layer"
+    obUpdateHeadLayer "$layer"
+  else
+    echo "Wrong layer index"
+  fi
+
+}
+
+obHwPoweroffCmd()
+{
+  assertRoot
+  echo 1 | tee /proc/sys/kernel/sysrq && echo o | tee /proc/sysrq-trigger
+}
+
+obHwRebootCmd()
+{
+  assertRoot
+  echo 1 | tee /proc/sys/kernel/sysrq && echo b | tee /proc/sysrq-trigger
+}
+
+#===========================================
+
+(return 0 2>/dev/null) || main "$@"

@@ -464,7 +464,7 @@ vgRun()
   umount -lf "$TEST_MNT_DIR"
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml"
 
-  newLayer="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers/$layerName"
+  newLayer="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers/${layerName}.obld"
   layerMetaFileSum=$(md5sum "$newLayer/root/etc/layer.yaml" | awk '{print $1}')
 
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"

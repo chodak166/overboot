@@ -14,6 +14,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <libgen.h>
+#include <unistd.h>
 
 #define JOB_COMMIT_NAME "commit"
 #define JOB_UPDATE_CONFIG_NAME "update-config"
@@ -29,6 +30,7 @@ static bool obExecUpdateConfigJob(ObContext* context, const char* jobsDir)
     obLogI("Config update job found in: %s", jobPath);
     obRemountRw(context->root, NULL);
     result = obCopyFile(jobPath, context->config.configPath);
+    sync();
     obRemountRo(context->root, NULL);
 
     result = obRemovePath(jobPath) && result;
@@ -123,7 +125,7 @@ static bool commitUpperLayer(ObContext* context, const char* jobPath)
   bool result = true;
   sds upperPath = obGetUpperPath(context);
   sds newLayerPath = obGetLayersPath(context);
-  newLayerPath = sdscatfmt(newLayerPath, "/%s", info.name);
+  newLayerPath = sdscatfmt(newLayerPath, "/%s.obld", info.name);
 
   if (obExists(newLayerPath)) {
     obLogE("Layer named %s already exists in %s", info.name, newLayerPath);

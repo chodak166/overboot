@@ -112,6 +112,29 @@ static bool obPrepareOverlay(const ObContext* context)
   return true;
 }
 
+static bool obBindJobsDir(const ObContext* context, const char* bindedOverlay)
+{
+  sds jobsDir = obGetJobsPath(context);
+  if (!obMkpath(jobsDir, OB_MKPATH_MODE)) {
+    sdsfree(jobsDir);
+    return false;
+  }
+
+  sds bindedJobsDir = obGetBindedJobsPath(bindedOverlay);
+  bool result = true;
+
+  if (!obMkpath(jobsDir, OB_MKPATH_MODE)) {
+    result = false;
+  }
+  else {
+    result = obRbind(jobsDir, bindedJobsDir);
+  }
+
+  sdsfree(jobsDir);
+  sdsfree(bindedJobsDir);
+  return result;
+}
+
 // --------- public API ---------- //
 
 
@@ -265,7 +288,7 @@ bool obInitManagementBindings(ObContext* context)
     sds layersDir = sdsnew(repoPath);
     layersDir = sdscat(layersDir, "/layers");
 
-    sds bindedLayersDir = obGetBindedLayersPath(context);
+    sds bindedLayersDir = obGetBindedLayersPath(bindedOverlay);
 
     obMkpath(layersDir, OB_MKPATH_MODE);
     obMkpath(bindedLayersDir, OB_MKPATH_MODE);
@@ -287,6 +310,8 @@ bool obInitManagementBindings(ObContext* context)
     sdsfree(upper);
     sdsfree(bindedUpper);
   }
+
+  result = result && obBindJobsDir(context, bindedOverlay);
 
   sdsfree(bindedOverlay);
   return result;

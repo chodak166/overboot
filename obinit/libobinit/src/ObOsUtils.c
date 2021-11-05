@@ -21,6 +21,8 @@
 
 #define UNUSED(x) (void)(x)
 
+#define FILE_COPY_BUFFER_SIZE 1024
+
 static int obMkdir(const char *path, mode_t mode)
 {
   struct stat st;
@@ -99,6 +101,31 @@ static bool obEnsureParentExists(const char* path)
   return true;
 }
 
+static bool obCopyFileAttributes(const char* src, const char* dst)
+{
+  struct stat st;
+  if (stat(src, &st) == -1) {
+    obLogE("Cannot stat %s", src);
+    return false;
+  }
+
+  chmod(dst, st.st_mode);
+  chown(dst, st.st_uid, st.st_gid);
+
+  int fd = open(dst, O_WRONLY);
+  if (fd == -1) {
+    obLogE("Cannot open file (ts update) %s: %s", dst, strerror(errno));
+    return false;
+  }
+
+  struct timespec times[2] = {
+    st.st_atim,
+    st.st_mtim
+  };
+  utimensat(fd, dst, times, 0);
+  close(fd);
+  return true;
+}
 
 // --------- public API ---------- //
 
@@ -205,26 +232,65 @@ bool obCreateBlankFile(const char* path)
   return true;
 }
 
+//bool obCopyFile(const char* src, const char* dst)
+//{
+//  if (!obEnsureParentExists(dst)) {
+//    return false;
+//  }
+
+//  int fdIn = open(src, O_RDONLY);
+//  if (fdIn == -1) {
+//    obLogE("Cannot open source file %s: %s", src, strerror(errno));
+//    return false;
+//  }
+
+//  struct stat stat;
+//  if (fstat(fdIn, &stat) == -1) {
+//    obLogE("Cannot stat %s", src);
+//    return false;
+//  }
+
+//  off_t len = stat.st_size;
+
+
+//  char dname[OB_PATH_MAX];
+//  strcpy(dname, dst);
+//  dirname(dname);
+//  if (!obExists(dname)) {
+//    obMkpath(dname, OB_MKPATH_MODE);
+//  }
+
+//  int fdOut = open(dst, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+//  if (fdOut == -1) {
+//    obLogE("Cannot open destination file %s: %s", dst, strerror(errno));
+//    return false;
+//  }
+
+//  off_t ret;
+//  do {
+//    ret = copy_file_range(fdIn, NULL, fdOut, NULL, len, 0);
+//    if (ret == -1) {
+//      obLogE("Cannot copy %s to %s: %s", src, dst, strerror(errno));
+//      return false;
+//    }
+
+//    len -= ret;
+//  } while (len > 0 && ret > 0);
+
+//  close(fdIn);
+//  close(fdOut);
+//  return true;
+//}
+
 bool obCopyFile(const char* src, const char* dst)
 {
-  if (!obEnsureParentExists(dst)) {
-    return false;
-  }
+  char buffer[FILE_COPY_BUFFER_SIZE];
 
-  int fdIn = open(src, O_RDONLY);
-  if (fdIn == -1) {
+  FILE *fIn = fopen(src, "r");
+  if (fIn == NULL) {
     obLogE("Cannot open source file %s: %s", src, strerror(errno));
     return false;
   }
-
-  struct stat stat;
-  if (fstat(fdIn, &stat) == -1) {
-    obLogE("Cannot stat %s", src);
-    return false;
-  }
-
-  off_t len = stat.st_size;
-
 
   char dname[OB_PATH_MAX];
   strcpy(dname, dst);
@@ -233,30 +299,33 @@ bool obCopyFile(const char* src, const char* dst)
     obMkpath(dname, OB_MKPATH_MODE);
   }
 
-  int fdOut = open(dst, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-  if (fdOut == -1) {
+  FILE *fOut = fopen(dst, "w");
+  if (fOut == NULL) {
     obLogE("Cannot open destination file %s: %s", dst, strerror(errno));
+    fclose(fIn);
     return false;
   }
 
-  off_t ret;
-  do {
-    ret = copy_file_range(fdIn, NULL, fdOut, NULL, len, 0);
-    if (ret == -1) {
-      obLogE("Cannot copy %s to %s: %s", src, dst, strerror(errno));
+  while (!feof(fIn)) {
+    size_t byteCount = fread(buffer, 1, sizeof(buffer), fIn);
+    if (byteCount && fwrite(buffer, 1, byteCount, fOut) != byteCount) {
+      obLogE("Error while writing to %s: %s", dst, strerror(errno));;
+      fclose(fIn);
+      fclose(fOut);
       return false;
     }
+  }
 
-    len -= ret;
-  } while (len > 0 && ret > 0);
+  fclose(fIn);
+  fclose(fOut);
 
-  close(fdIn);
-  close(fdOut);
+  obCopyFileAttributes(src, dst);
   return true;
 }
 
 bool obSync(const char* src, const char* dst)
 {
+  obLogI("Syncing %s -> %s", src, dst);
   syncSrcDir = src;
   syncDstDir = dst;
   bool result = nftw(src, obSyncCb, 10, FTW_MOUNT | FTW_PHYS) >= 0;

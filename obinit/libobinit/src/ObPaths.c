@@ -69,11 +69,15 @@ sds obGetJobsPath(const ObContext* context)
   return path;
 }
 
-sds obGetBindedLayersPath(const ObContext* context)
+sds obGetBindedJobsPath(const char* bindedOverlay)
 {
-  sds bindedOverlay = obGetBindedOverlayPath(context);
+  sds bindedJobsDir = sdsnew(bindedOverlay);
+  return sdscatfmt(bindedJobsDir, "/%s", OB_JOBS_DIR_NAME);
+}
+
+sds obGetBindedLayersPath(const char* bindedOverlay)
+{
   sds bindedLayersDir = sdsnew(bindedOverlay);
-  sdsfree(bindedOverlay);
   return sdscat(bindedLayersDir, "/layers");
 }
 

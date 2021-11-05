@@ -1,5 +1,5 @@
 enabled: true
-config_dir: ""
+config_dir: "overboot.d"
 layers:
   visible: true
   device: "/dev/sdb"
@@ -10,8 +10,8 @@ layers:
   # device: "/var/obdev"
 
 upper:
-  type: "tmpfs"
-  size: "4096k"
+  type: "persistent"
+  
 durables:
     - path: "/test/durables-dir-1"
       copy_origin: false
