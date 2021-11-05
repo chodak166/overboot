@@ -14,11 +14,15 @@
 ##
 ## Commands:
 ##
-## status (default) - show current overboot status
+## status (default) - show current overboot status and list active layers
 ##
 ## config           - edit the configuration file
 ##
 ## commit           - create new layer from the last persistent upper layer
+##
+## list             - print available layers
+##
+## switch           - change current head layer
 ##
 ## log              - print obinit logs
 ##
