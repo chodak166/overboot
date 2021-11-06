@@ -17,7 +17,7 @@ add_executable(${TARGET}
   src/main.c
   src/ObArgParser.c
   )
-target_link_libraries(${TARGET} obinit yaml.a)
+target_link_libraries(${TARGET} obinit)
 set_target_properties(${TARGET}
         PROPERTIES OUTPUT_NAME ${OUTPUT_NAME})
 
@@ -45,14 +45,10 @@ install (
   DESTINATION /
   )
 
-#install (
-#  FILES ${CMAKE_CURRENT_LIST_DIR}/systemd/pb-id-broadcaster.service
-#  DESTINATION /etc/systemd/system/
-#  )
 
 ################## PACKAGING #################
 
-set(INSTALLER_NAME ${PROJECT_NAME})
+set(INSTALLER_NAME overboot-init)
 set(INSTALLER_RELEASE 1)
 set(INSTALLER_DESCRIPTION_SUMMARY "Overboot initialization binary")
 set(INSTALLER_DEPENDS "initramfs-tools")

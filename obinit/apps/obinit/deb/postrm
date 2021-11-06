@@ -1,2 +1,7 @@
 #!/bin/bash
 
+update-initramfs -u
+
+updateConfigHook=/etc/initramfs-tools/hooks/update-configtxt
+
+[ -f $updateConfigHook ] && rm $updateConfigHook

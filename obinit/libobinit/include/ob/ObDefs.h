@@ -88,11 +88,11 @@
 #endif
 
 #ifndef OB_DEV_MOUNT_MODE
-#define OB_DEV_MOUNT_MODE 0700
+#define OB_DEV_MOUNT_MODE 0775
 #endif
 
 #ifndef OB_MKPATH_MODE
-#define OB_MKPATH_MODE 0700
+#define OB_MKPATH_MODE 0775
 #endif
 
 #ifndef OB_ROOT_MODE

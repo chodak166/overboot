@@ -24,6 +24,8 @@
 ##
 ## switch           - change current head layer
 ##
+## relocate         - change current device
+##
 ## log              - print obinit logs
 ##
 ## hwreboot         - force instant reboot (not recomended with non-tmpfs upper layer)
@@ -61,6 +63,8 @@ STDOUT=`readlink -f /proc/$$/fd/1`
 STDERR=`readlink -f /proc/$$/fd/2`
 
 EDIT_COMMANDS=(micro nano vim vi editor)
+DEV_FS_TYPES=(ext4)
+#DEV_FS_TYPES=(ext2 ext3 ext4 xfs vfat ntfs) #TODO add fstype in overboot.yaml
 
 args=($@)
 commandName=status
@@ -170,6 +174,8 @@ run()
       obListLayersCmd;;
     ('switch')
       obSwitchHeadCmd;;
+    ('relocate')
+      obRelocateCmd;;
     ('hwpoweroff')
       obHwPoweroffCmd;;
     ('hwreboot')
@@ -293,8 +299,19 @@ obPrepareConfigUpdateJobFile()
   echo "$jobFile"
 }
 
+obGetEditableConfig()
+{
+  if [ $obRunning = true ]; then
+    echo $(obPrepareConfigUpdateJobFile)
+  else
+    echo "${rootfs}$OB_CONFIG_FILE"
+  fi
+}
+
 obConfigCmd()
 {
+  assertRoot
+
   if [ $obRunning = true ]; then
     
     local jobFile="$(obPrepareConfigUpdateJobFile)"
@@ -382,7 +399,7 @@ EOF
 obUpdateHeadLayer()
 {
   local layerName="$1"
-  local jobFile="$(obPrepareConfigUpdateJobFile)"
+  local jobFile="$(obGetEditableConfig)"
   str=$(cat "$jobFile")
 
   re="(\s+head\s*:\s*)(\S+)"
@@ -395,6 +412,72 @@ obUpdateHeadLayer()
   else
     echo "Cannot find 'head' entry in $jobFile"
   fi
+}
+
+obUpdateDevice()
+{
+  local device="$1"
+  local jobFile="$(obGetEditableConfig)"
+  str=$(cat "$jobFile")
+
+  re="(\s+device\s*:\s*)(\S+)"
+  if [[ "$str" =~ $re ]]; then
+    local escapedMatch=$(printf '%s\n' "${BASH_REMATCH[0]}" | sed -e 's/[\"]/\\"/g')
+    local escapedMatch=$(printf '%s\n' "${escapedMatch}" | sed -e 's/[/]/\\\//g')
+    local escapedMatch="${escapedMatch#"${escapedMatch%%[![:space:]]*}"}" # remove leading whitespace
+    local escapedMatch="${escapedMatch%"${escapedMatch##*[![:space:]]}"}" # remove trailing whitespace
+    sed -i "s/$escapedMatch/device: \"$device\"/g" "$jobFile"
+    echo -e "\n${GREEN}Device update has been scheduled for the next boot${NC}\n"
+  else
+    echo "Cannot find 'device' entry in $jobFile"
+  fi
+}
+
+obRelocateCmd()
+{
+  obFindDeviceCandidates
+
+  if [ ${#DEV_CANDIDATES[@]} -eq 0 ]; then
+    echo "No suitable devices found (non-root ${DEV_FS_TYPES[@]})"
+    return 0
+  fi
+
+  echo "Suitable devices:"
+  for i in "${!DEV_CANDIDATES[@]}"; do
+    echo "[$i] ${DEV_CANDIDATES[$i]}"
+  done
+
+  echo -en "\nSelect new device number (0-$((${#DEV_CANDIDATES[@]}-1))): "
+  read n
+
+  if [ $n -ge 0 ] && [ $n -lt ${#DEV_CANDIDATES[@]} ]; then
+    local uuid=$(echo ${DEV_CANDIDATES[$n]} | awk '{print $2}')
+    obUpdateDevice "UUID=$uuid"
+  else
+    echo "Wrong device index"
+  fi
+
+}
+
+obFindDeviceCandidates()
+{
+  DEV_CANDIDATES=()
+
+  OIFS="$IFS"
+  IFS=$'\n'
+
+  for entry in `lsblk -o path,uuid,fstype,size,label,mountpoint -P`  
+  do
+    eval $(echo "$entry" | sed 's/PATH/DPATH/g')
+    if [[ "$MOUNTPOINT" == "/" ]] || [[ "$MOUNTPOINT" == "/overboot/lower-root" ]]; then
+      continue 
+    fi
+
+    if [ ! -z "$FSTYPE" ] && (printf '%s\n' "${DEV_FS_TYPES[@]}" | grep -q "$FSTYPE"); then
+      DEV_CANDIDATES[${#DEV_CANDIDATES[@]}]=$(echo -e "$DPATH\t $UUID\t $FSTYPE\t $SIZE\t $LABEL")
+    fi
+  done
+  IFS="$OIFS"
 }
 
 obLogCmd()

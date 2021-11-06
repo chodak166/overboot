@@ -14,6 +14,7 @@ bool obExists(const char* path);
 bool obIsFile(const char* path);
 bool obIsBlockDevice(const char* path);
 bool obIsDirectory(const char* path);
+bool obIsDirectoryEmpty(const char* path);
 bool obRemoveDirR(const char* path);
 bool obRemovePath(const char* path);
 bool obCreateBlankFile(const char* path);

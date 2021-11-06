@@ -84,7 +84,11 @@ int main(int argc, char* argv[])
            && context->reloadConfig
            && context->config.enabled);
 
-
+  if (!obErrorOccurred()
+      && maxReloads != OB_MAX_CONFIG_RELOADS
+      && !context->config.enabled) {
+    exitCode = EXIT_SUCCESS;
+  }
 
   obFreeObContext(&context);
 

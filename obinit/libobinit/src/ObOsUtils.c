@@ -16,12 +16,15 @@
 #include <string.h>
 #include <fcntl.h>
 #include <libgen.h>
+#include <dirent.h>
+#include <sys/types.h>
 
 #include <ftw.h>
 
 #define UNUSED(x) (void)(x)
 
 #define FILE_COPY_BUFFER_SIZE 1024
+#define NFTW_NOPENFD 10
 
 static int obMkdir(const char *path, mode_t mode)
 {
@@ -64,7 +67,9 @@ static int obSyncCb(const char* path, const struct stat* sbuf, int type, struct 
   strcat(toPath, path + strlen(syncSrcDir));
 
   if (type == FTW_D) {
-    if (!obMkpath(toPath, OB_MKPATH_MODE)) {
+    struct stat st;
+    stat(path, &st);
+    if (!obMkpath(toPath, st.st_mode)) {
       return 1;
     }
   }
@@ -120,7 +125,7 @@ static bool obCopyFileAttributes(const char* src, const char* dst)
 
   struct timespec times[2] = {
     st.st_atim,
-    st.st_mtim
+        st.st_mtim
   };
   utimensat(fd, dst, times, 0);
   close(fd);
@@ -197,6 +202,25 @@ bool obIsDirectory(const char* path)
   }
 }
 
+bool obIsDirectoryEmpty(const char* path)
+{
+  DIR *dir = opendir(path);
+  if (dir == NULL) {
+    obLogW("Not a directory: %s", path);
+    return false;
+  }
+
+  int n = 0;
+  while (readdir(dir) != NULL) {
+    n += 1;
+    if(n > 2) {
+      break;
+    }
+  }
+  closedir(dir);
+  return n <= 2;
+}
+
 bool obRemoveDirR(const char* path)
 {
   if (!obExists(path)) {
@@ -232,56 +256,6 @@ bool obCreateBlankFile(const char* path)
   return true;
 }
 
-//bool obCopyFile(const char* src, const char* dst)
-//{
-//  if (!obEnsureParentExists(dst)) {
-//    return false;
-//  }
-
-//  int fdIn = open(src, O_RDONLY);
-//  if (fdIn == -1) {
-//    obLogE("Cannot open source file %s: %s", src, strerror(errno));
-//    return false;
-//  }
-
-//  struct stat stat;
-//  if (fstat(fdIn, &stat) == -1) {
-//    obLogE("Cannot stat %s", src);
-//    return false;
-//  }
-
-//  off_t len = stat.st_size;
-
-
-//  char dname[OB_PATH_MAX];
-//  strcpy(dname, dst);
-//  dirname(dname);
-//  if (!obExists(dname)) {
-//    obMkpath(dname, OB_MKPATH_MODE);
-//  }
-
-//  int fdOut = open(dst, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-//  if (fdOut == -1) {
-//    obLogE("Cannot open destination file %s: %s", dst, strerror(errno));
-//    return false;
-//  }
-
-//  off_t ret;
-//  do {
-//    ret = copy_file_range(fdIn, NULL, fdOut, NULL, len, 0);
-//    if (ret == -1) {
-//      obLogE("Cannot copy %s to %s: %s", src, dst, strerror(errno));
-//      return false;
-//    }
-
-//    len -= ret;
-//  } while (len > 0 && ret > 0);
-
-//  close(fdIn);
-//  close(fdOut);
-//  return true;
-//}
-
 bool obCopyFile(const char* src, const char* dst)
 {
   char buffer[FILE_COPY_BUFFER_SIZE];
@@ -296,7 +270,9 @@ bool obCopyFile(const char* src, const char* dst)
   strcpy(dname, dst);
   dirname(dname);
   if (!obExists(dname)) {
-    obMkpath(dname, OB_MKPATH_MODE);
+    struct stat st;
+    stat(src, &st);
+    obMkpath(dname, st.st_mode);
   }
 
   FILE *fOut = fopen(dst, "w");
@@ -328,7 +304,7 @@ bool obSync(const char* src, const char* dst)
   obLogI("Syncing %s -> %s", src, dst);
   syncSrcDir = src;
   syncDstDir = dst;
-  bool result = nftw(src, obSyncCb, 10, FTW_MOUNT | FTW_PHYS) >= 0;
+  bool result = nftw(src, obSyncCb, NFTW_NOPENFD, FTW_PHYS) >= 0;
   syncSrcDir = NULL;
   syncDstDir = NULL;
   return result;

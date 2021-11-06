@@ -23,19 +23,14 @@ readWithTimeout() {
 }
 
 obBin=${rootmnt}/sbin/obinit
-timeout=25
+timeout=5
 
 if [ ! -f ${obBin} ]; then
-  echo "${mmsOverlayScript} not found. Boot will continue after ${timeout} seconds. Press enter to continue without timeout."
+  echo "${obBin} not found. Boot will continue after ${timeout} seconds. Press enter to continue without timeout."
   readWithTimeout ${timeout}
   exit 0
 fi
 
-${obBin} -c ${rootmnt}/etc/overboot.yaml || MMS_STATUS=failed
-
-if [ ${MMS_STATUS} == failed ]; then
-  echo "${mmsOverlayScript} execution failed. Boot will continue after ${timeout} seconds. Press enter to continue without timeout."
-  readWithTimeout ${timeout}
-fi
+${obBin} -c ${rootmnt}/etc/overboot.yaml
 
 exit 0

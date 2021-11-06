@@ -146,14 +146,19 @@ bool obInitPersistentDevice(ObContext* context)
       obLogE("%s does not look like path nor valid UUID, aborting", config->devicePath);
       return false;
     }
+    obLogI("Device not found, using %s as a local repository ", config->devicePath);
+    obLogW("Using local repository requires RW mount of the lower layer");
 
     sds localRepoDir = sdsnew(context->root);
     localRepoDir = sdscat(localRepoDir, config->devicePath);
     strcpy(config->devicePath, localRepoDir);
     sdsfree(localRepoDir);
 
-    obLogI("Device not found, using %s as a local repository ", config->devicePath);
-    obLogW("Using local repository requires RW mount of the lower layer");
+    if (!config->useTmpfs) {
+      obLogE("Using repository from the same device as rootfs is not supported due to overlayfs limitations. Please use tmpfs as the upper layer.");
+      return false;
+    }
+
     context->dirAsDevice = true;
     obRemountRw(context->root, NULL);
 
@@ -193,14 +198,9 @@ bool obInitOverbootDir(ObContext* context)
 
 bool obInitLowerRoot(ObContext* context)
 {
-  if (!context->dirAsDevice) {
-    obRemountRo(context->root, NULL);
-  }
-
   bool result = true;
   sds lowerPath = obGetLowerRootPath(context);
 
-  obLogI("Moving %s to %s", context->root, lowerPath);
   if (!obMove(context->root, lowerPath)) {
     result = false;
   }
@@ -250,6 +250,10 @@ bool obInitOverlayfs(ObContext* context)
                       paths.workPath, context->root)) {
     obLogE("Cannot mount overlay");
     result = false;
+  }
+
+  if (!context->dirAsDevice) {
+    obRemountRo(paths.lowerPath, NULL);
   }
 
   layerItem = topLayer;

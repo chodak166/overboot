@@ -17,10 +17,6 @@
 
 bool obDeinitPersistentDevice(ObContext* context)
 {
-  if (context->dirAsDevice) {
-    obRemountRo(context->root, NULL);
-  }
-
   if (!obExists(context->devMountPoint)) {
     return true;
   }

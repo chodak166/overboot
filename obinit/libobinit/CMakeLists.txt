@@ -41,11 +41,14 @@ target_compile_definitions(${TARGET}
   -D_GNU_SOURCE
   )
 
+target_link_libraries(${TARGET} PUBLIC yaml.a
+  )
+
 option(OB_USE_BLKID "Use liblkid" ON)
 if (${OB_USE_BLKID})
   target_compile_definitions(${TARGET}
     PRIVATE
     -DOB_USE_BLKID
     )
-  target_link_libraries(${TARGET} PUBLIC blkid)
+  target_link_libraries(${TARGET} PUBLIC blkid uuid)
 endif()

@@ -75,6 +75,7 @@ static ObTaskListPtr createObInitTaskList(ObContext* context)
 bool obExecObInitTasks(ObContext* context)
 {
   ObTaskListPtr tasks = createObInitTaskList(context);
+  obLogI("Executing obinit tasks");
   bool result = obExecTaskList(tasks);
 
   if (result && obErrorOccurred()) {
