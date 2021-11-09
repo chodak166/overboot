@@ -199,8 +199,7 @@ vgRun()
   mkdir -p "$mountedDurableDir"
   touch "$mountedDurableDir/$testFileName"
 
-  sync -f "$TEST_TMP_DIR"
-  umount "$TEST_MNT_DIR"
+  umount -fl "$TEST_MNT_DIR"
   
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
   
@@ -239,7 +238,7 @@ vgRun()
   mkdir -p "$(dirname "$newDurableFile")"
   echo $testValue > "$newDurableFile"
 
-  umount "$TEST_MNT_DIR"
+  umount -fl "$TEST_MNT_DIR"
   
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
 
@@ -317,14 +316,14 @@ vgRun()
 }
 
 @test "obinit should use rootmnt subdirectory as a device if the configuration doesn't point to a file or a device" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
 
   [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
   [ $vgExitCode -eq 0 ]
 }
 
-@test "obinit should block write access to the local repository directory via mounted overlayfs" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
+@test "obinit should block write access to the embedded repository directory via mounted overlayfs" {
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
 
   testFileName="${RANDOM}-$(date +%s).test"
   canTouchThis=1
@@ -335,8 +334,15 @@ vgRun()
   [ $vgExitCode -eq 0 ]
 }
 
-@test "obinit should allow write access to the local repository directory via durables" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
+@test "obinit should fail if the embedded repository is used without tmpfs upper layer" {
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-persistent.yaml"
+
+  [ $vgExitCode -eq 1 ]
+  [ ! -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
+}
+
+@test "obinit should allow write access to the embedded repository directory via durables" {
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
 
   testFileName="${RANDOM}-$(date +%s).test"
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName"
@@ -350,8 +356,7 @@ vgRun()
 
   [ -f "$TEST_ROOTMNT_DIR/etc/fstab" ]
 
-  sync -f "$TEST_TMP_DIR"
-  umount "$TEST_ROOTMNT_DIR"
+  umount -fl "$TEST_ROOTMNT_DIR"
 
   tmpInMount=1
   mount | grep -q "$TEST_TMP_DIR" || tmpInMount=0
@@ -375,7 +380,7 @@ vgRun()
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
   oldConfig="$TEST_TMP_DIR/overboot.yaml"
-  newConfig="$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
+  newConfig="$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
   jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/update-config"
 
   cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$oldConfig"
@@ -401,7 +406,7 @@ vgRun()
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
   oldConfig="$TEST_TMP_DIR/overboot.yaml"
-  newConfig="$TEST_CONFIGS_DIR/overboot-local-repo.yaml"
+  newConfig="$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
   jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/update-config"
 
   cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$oldConfig"

@@ -3,7 +3,7 @@
 [ -d /etc/overboot.d ] || mkdir /etc/overboot.d
 [ -f /etc/overboot.yaml ] || cp /usr/share/overboot/overboot.yaml.default /etc/overboot.yaml
 
-chmod +x /usr/share/initramfs-tools/scripts/local-bottom/obinit
+momochmod +x /usr/share/initramfs-tools/scripts/local-bottom/obinit
 chmod +x /usr/bin/obhelper
 
 grep -v '^\s*$\|^\s*\#' /etc/initramfs-tools/modules | grep -q overlay || echo "overlay" >> /etc/initramfs-tools/modules
