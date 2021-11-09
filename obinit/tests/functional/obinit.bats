@@ -9,17 +9,11 @@ setup()
   if [ ! -f "$OBINIT_BIN"  ]; then
     echo "ERROR: obinit binary not found ($OBINIT_BIN), please provide OBINIT_BIN environment variable" 1>&2 && exit 1
   fi
-
-  loopDev=""
 }
 
 teardown()
 {
   test_cleanup
-
-  if [ ! -z "$loopDev" ]; then
-    losetup -d $loopDev
-  fi
 }
 
 # run command through valgrind if present
@@ -43,7 +37,6 @@ vgRun()
 
 @test "obinit should mount data device by path" {
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
-   
   [ $(test_isMounted "$TEST_OB_DEVICE_MNT_PATH") -eq 0 ]
   [ $vgExitCode -eq 0 ]
 }
@@ -57,7 +50,6 @@ vgRun()
 
 
 @test "obinit should mount data device by UUID" {
-  loopDev=$(losetup -P --show -f "$TEST_OB_DEVICE_PATH")
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-uuid.yaml" ||:
 
   [ $(test_isMounted "$TEST_OB_DEVICE_MNT_PATH") -eq 0 ]
@@ -317,7 +309,6 @@ vgRun()
 
 @test "obinit should use rootmnt subdirectory as a device if the configuration doesn't point to a file or a device" {
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
-
   [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
   [ $vgExitCode -eq 0 ]
 }
@@ -348,6 +339,20 @@ vgRun()
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName"
   
   [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_1/$testFileName" ]
+  [ $vgExitCode -eq 0 ]
+}
+
+@test "obinit should use embedded image as a device if the configuration points to an image file inside rootmnt (tmpfs)" {
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-img-tmpfs.yaml"
+
+  [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
+  [ $vgExitCode -eq 0 ]
+}
+
+@test "obinit should use embedded image as a device if the configuration points to an image file inside rootmnt (persistent)" {
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-img-persistent.yaml"
+
+  [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
   [ $vgExitCode -eq 0 ]
 }
 

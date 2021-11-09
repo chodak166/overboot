@@ -9,13 +9,17 @@
 #include <stdbool.h>
 #include "ob/ObConfig.h"
 
-bool obMountDevice(const char* device, const char* mountPoint);
+bool obMountBlockDevice(const char* device, const char* mountPoint);
+
+bool obMountImageFile(const char* device, const char* mountPoint);
+
+//bool obMountDevice(const char* device, const char* mountPoint);
 
 bool obUnmount(const char* path);
 
 bool obUnmountDevice(const char* mountPoint);
 
-bool obMountLocalRepository(const char* repoPath, const char* mountPoint);
+bool obMountEmbeddedRepository(const char* repoPath, const char* mountPoint);
 
 bool obRbind(const char* srcPath, const char* dstPath);
 

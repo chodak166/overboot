@@ -35,7 +35,7 @@ static OverlayPaths newOverlayPaths(const ObContext* context)
   paths.repoPath = sdsempty();
   paths.repoPath = sdscatfmt(paths.repoPath, ""
                                 "%s/%s", context->devMountPoint,
-                                context->config.repository);
+                             context->config.repository);
 
   paths.layersPath = obGetLayersPath(context);
 
@@ -135,43 +135,69 @@ static bool obBindJobsDir(const ObContext* context, const char* bindedOverlay)
   return result;
 }
 
+
 // --------- public API ---------- //
 
 
 bool obInitPersistentDevice(ObContext* context)
 {
+  //  ObConfig* config = &context->config;
+  //  if (!obFindDevice(context)) {
+  //    if (strlen(config->devicePath) && config->devicePath[0] != '/') {
+  //      obLogE("%s does not look like path nor valid UUID, aborting", config->devicePath);
+  //      return false;
+  //    }
+  //    obLogI("Device not found, using %s as a local repository ", config->devicePath);
+  //    obLogW("Using local repository requires RW mount of the lower layer");
+
+  //    sds localRepoDir = sdsnew(context->root);
+  //    localRepoDir = sdscat(localRepoDir, config->devicePath);
+  //    strcpy(config->devicePath, localRepoDir);
+  //    sdsfree(localRepoDir);
+
+  //    if (!config->useTmpfs) {
+  //      obLogE("Using repository from the same device as rootfs is not supported due to overlayfs limitations. Please use tmpfs as the upper layer.");
+  //      return false;
+  //    }
+
+  //    context->dirAsDevice = true;
+  //    obRemountRw(context->root, NULL);
+
+  //    bool result = obMountLocalRepository(config->devicePath, context->devMountPoint);
+  //    return result;
+  //  }
+
+  //  if (!obMountDevice(config->devicePath, context->devMountPoint)) {
+  //    obLogE("Device mount (%s -> %s) failed", config->devicePath, context->devMountPoint);
+  //    return false;
+  //  }
+
   ObConfig* config = &context->config;
   if (!obFindDevice(context)) {
-    if (strlen(config->devicePath) && config->devicePath[0] != '/') {
-      obLogE("%s does not look like path nor valid UUID, aborting", config->devicePath);
-      return false;
-    }
-    obLogI("Device not found, using %s as a local repository ", config->devicePath);
-    obLogW("Using local repository requires RW mount of the lower layer");
-
-    sds localRepoDir = sdsnew(context->root);
-    localRepoDir = sdscat(localRepoDir, config->devicePath);
-    strcpy(config->devicePath, localRepoDir);
-    sdsfree(localRepoDir);
-
-    if (!config->useTmpfs) {
-      obLogE("Using repository from the same device as rootfs is not supported due to overlayfs limitations. Please use tmpfs as the upper layer.");
-      return false;
-    }
-
-    context->dirAsDevice = true;
-    obRemountRw(context->root, NULL);
-
-    bool result = obMountLocalRepository(config->devicePath, context->devMountPoint);
-    return result;
-  }
-
-  if (!obMountDevice(config->devicePath, context->devMountPoint)) {
-    obLogE("Device mount (%s -> %s) failed", config->devicePath, context->devMountPoint);
+    obLogE("Cannot find or identify device: %s", config->devicePath);
     return false;
   }
 
-  return true;
+  switch(context->deviceType) {
+  case OB_DEV_BLK:
+    return obMountBlockDevice(context->foundDevicePath, context->devMountPoint);
+  case OB_DEV_IMG:
+    obLogW("Using embedded image as a repository device requires RW mount of the lower layer");
+    obRemountRw(context->root, NULL);
+    return obMountImageFile(context->foundDevicePath, context->devMountPoint);
+  case OB_DEV_DIR:
+    obLogW("Using embedded directory as a repository device requires RW mount of the lower layer");
+    obRemountRw(context->root, NULL);
+    if (!config->useTmpfs) {
+      obLogE("Using repository from the same device as rootfs is not supported due to the overlayfs limitations. Please use embeddd image instead or tmpfs as the upper layer.");
+      return false;
+    }
+    return obMountEmbeddedRepository(context->foundDevicePath, context->devMountPoint);
+  default:
+    obLogE("Unknown device type");
+  }
+
+  return false;
 }
 
 bool obInitOverbootDir(ObContext* context)
@@ -252,7 +278,7 @@ bool obInitOverlayfs(ObContext* context)
     result = false;
   }
 
-  if (!context->dirAsDevice) {
+  if (context->deviceType == OB_DEV_BLK) {
     obRemountRo(paths.lowerPath, NULL);
   }
 
@@ -263,9 +289,12 @@ bool obInitOverlayfs(ObContext* context)
     free(currentItem);
   }
 
-  if (context->dirAsDevice && !obBlockByTmpfs(context->config.devicePath)) {
+  if (context->deviceType == OB_DEV_DIR
+      && !obBlockByTmpfs(context->foundDevicePath)) {
     result = false;
   }
+
+  //TODO: block image by whiteout?
 
   chmod(context->root, OB_ROOT_MODE); //TODO: move to mount?
 
@@ -309,7 +338,7 @@ bool obInitManagementBindings(ObContext* context)
     sds upper = obGetUpperPath(context);
     sds bindedUpper = obGetBindedUpperPath(context);
     if (!obRbind(upper, bindedUpper)) {
-        result = false;
+      result = false;
     }
     sdsfree(upper);
     sdsfree(bindedUpper);

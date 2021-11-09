@@ -169,37 +169,23 @@ bool obExists(const char* path)
 bool obIsFile(const char* path)
 {
   struct stat fileStat;
-  int exist = stat(path, &fileStat);
-  if (exist == 0 && (fileStat.st_mode & S_IFREG)) {
-    return 1;
-  }
-  else {
-    return 0;
-  }
+  int stRet = stat(path, &fileStat);
+  return stRet == 0 && S_ISREG(fileStat.st_mode);
 }
 
 bool obIsBlockDevice(const char* path)
 {
   struct stat fileStat;
-  int exist = stat(path, &fileStat);
-  if (exist == 0 && (fileStat.st_mode & S_IFBLK)) {
-    return 1;
-  }
-  else {
-    return 0;
-  }
+  int stRet = stat(path, &fileStat);
+  obLogI("Device mode: %i", fileStat.st_mode);
+  return stRet == 0 && S_ISBLK(fileStat.st_mode);
 }
 
 bool obIsDirectory(const char* path)
 {
   struct stat fileStat;
-  int exist = stat(path, &fileStat);
-  if (exist == 0 && (fileStat.st_mode & S_IFDIR)) {
-    return 1;
-  }
-  else {
-    return 0;
-  }
+  int stRet = stat(path, &fileStat);
+  return stRet == 0 && S_ISDIR(fileStat.st_mode);
 }
 
 bool obIsDirectoryEmpty(const char* path)

@@ -20,8 +20,14 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-static bool obMountBlockDevice(const char* device, const char* mountPoint)
+// --------- public API ---------- //
+
+bool obMountBlockDevice(const char* device, const char* mountPoint)
 {
+  if (!obMkpath(mountPoint, OB_DEV_MOUNT_MODE)) {
+    return false;
+  }
+
   int result = mount(device, mountPoint,
                  OB_DEV_IMAGE_FS, OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS);
   if (result != 0) {
@@ -32,13 +38,17 @@ static bool obMountBlockDevice(const char* device, const char* mountPoint)
   return true;
 }
 
-static bool obMountImageFile(const char* device, const char* mountPoint)
+bool obMountImageFile(const char* device, const char* mountPoint)
 {
   char loopDevice[OB_DEV_PATH_MAX];
   int loopDeviceFd = obMountLoopDevice(device, loopDevice);
 
   if (loopDeviceFd < 0) {
     obLogE("Loop device mount failed");
+    return false;
+  }
+
+  if (!obMkpath(mountPoint, OB_DEV_MOUNT_MODE)) {
     return false;
   }
 
@@ -52,42 +62,38 @@ static bool obMountImageFile(const char* device, const char* mountPoint)
   return true;
 }
 
-// --------- public API ---------- //
+//bool obMountDevice(const char* device, const char* mountPoint)
+//{
+//  obLogI("Mounting device %s in %s", device, mountPoint);
 
-bool obMountDevice(const char* device, const char* mountPoint)
-{
-  obLogI("Mounting device %s in %s", device, mountPoint);
+//  if (!obMkpath(mountPoint, OB_DEV_MOUNT_MODE)) {
+//    return false;
+//  }
 
-  if (!obMkpath(mountPoint, OB_DEV_MOUNT_MODE)) {
-    return false;
-  }
+//  struct stat devStat;
+//  int result = lstat(device, &devStat);
+//  if (result != 0) {
+//    obLogE("Cannot stat %s: %s", device, strerror(errno));
+//    return false;
+//  }
 
-  obLogI("Directory %s created", mountPoint);
+//  if (S_ISBLK(devStat.st_mode)) {
+//    obLogI("%s identified as a block device", device);
+//    return obMountBlockDevice(device, mountPoint);
+//  }
+//  else if (S_ISREG(devStat.st_mode)){
+//    obLogI("%s identifed as a regular file", device);
+//    return obMountImageFile(device, mountPoint);
+//  }
 
-  struct stat devStat;
-  int result = lstat(device, &devStat);
-  if (result != 0) {
-    obLogE("Cannot stat %s: %s", device, strerror(errno));
-    return false;
-  }
+//  obLogE("Device type not supported");
+//  return false;
+//}
 
-  if (S_ISBLK(devStat.st_mode)) {
-    obLogI("%s identified as a block device", device);
-    return obMountBlockDevice(device, mountPoint);
-  }
-  else if (S_ISREG(devStat.st_mode)){
-    obLogI("%s identifed as a regular file", device);
-    return obMountImageFile(device, mountPoint);
-  }
-
-  obLogE("Device type not supported");
-  return false;
-}
-
-bool obMountLocalRepository(const char* repoPath, const char* mountPoint)
+bool obMountEmbeddedRepository(const char* repoPath, const char* mountPoint)
 {
   if (!obExists(repoPath)) {
-    obLogI("Local directory %s does not exist, creating...", repoPath);
+    obLogI("Embedded directory %s does not exist, creating...", repoPath);
     if (!obMkpath(repoPath, OB_MKPATH_MODE)) {
       return false;
     }
@@ -170,7 +176,7 @@ int obMountLoopDevice(const char* imagePath, char* loopDevice)
   int controlFd = open("/dev/loop-control", O_RDWR);
   if (controlFd < 0) {
       obLogE("Opening loop control device failed");
-      return 0;
+      return controlFd;
   }
 
   int loopId = ioctl(controlFd, LOOP_CTL_GET_FREE);
@@ -181,22 +187,22 @@ int obMountLoopDevice(const char* imagePath, char* loopDevice)
 
   int imageFd = open(imagePath, O_RDWR);
   if (imageFd < 0) {
-      obLogE("Opening image file failed");
-      return 0;
+      obLogE("Opening image file (%s) failed: %s", imagePath, strerror(errno));
+      return imageFd;
   }
 
   int deviceFd = open(loopDevice, O_RDWR);
   if (deviceFd < 0) {
       obLogE("Opening loop device failed");
       close(imageFd);
-      return 0;
+      return deviceFd;
   }
 
   if (ioctl(deviceFd, LOOP_SET_FD, imageFd) < 0) {
       obLogE("ioctl LOOP_SET_FD failed");
       close(imageFd);
       close(deviceFd);
-      return 0;
+      return -1;
   }
 
   close(imageFd);

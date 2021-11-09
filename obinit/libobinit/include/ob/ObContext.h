@@ -12,16 +12,27 @@
 #include <stdbool.h>
 #include <inttypes.h>
 
+typedef enum ObDeviceType
+{
+  OB_DEV_UNKNOWN = 0,
+  OB_DEV_BLK, // block device
+  OB_DEV_IMG, // embedded image
+  OB_DEV_DIR  // embedded directory
+} ObDeviceType;
+
 typedef struct ObContext
 {
   struct ObConfig config;
 
+  char* foundDevicePath;
   char* devMountPoint;
   char* overbootDir;
   char* root;
-  bool dirAsDevice;
+  ObDeviceType deviceType;
+
   bool reloadConfig;
 } ObContext;
+
 
 /**
  * @brief Create *initialized* OB context

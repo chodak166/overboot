@@ -60,9 +60,8 @@ bool obDeinitLowerRoot(ObContext* context)
 
 bool obDeinitOverlayfs(ObContext* context)
 {
-  if (context->dirAsDevice) {
-    obUnmount(context->config.devicePath);
-
+  if (context->deviceType == OB_DEV_DIR) {
+    obUnmount(context->foundDevicePath);
   }
   return obUnmount(context->root);
 }

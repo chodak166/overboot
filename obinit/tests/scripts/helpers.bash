@@ -29,7 +29,7 @@ TEST_RES_DIR="$TESTS_DIR/functional/res"
 TEST_CONFIGS_DIR="$TESTS_DIR/configs"
 
 if [[ -z "$TEST_TMP_DIR" ]]; then
-  TEST_TMP_DIR="$SCRIPT_DIR/tmp_$(date +%s)"
+  TEST_TMP_DIR="$SCRIPT_DIR/tmp_$(date +%s)_${RANDOM}"
 fi
 
 TEST_MNT_DIR="$TEST_TMP_DIR/mnt"
@@ -43,6 +43,7 @@ TEST_OB_DEVICE_MNT_PATH="$TEST_RAMFS_DIR/obmnt"
 TEST_OB_REPOSITORY_NAME="overboot"
 TEST_OB_CONFIG_PATH="$TEST_ROOTMNT_DIR/etc/overboot.yaml"
 TEST_DURABLES_STORAGE_DIR="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/durables"
+TEST_EMBEDDED_IMG="$TEST_ROOTMNT_DIR/var/obdev.img"
 
 TEST_DURABLE_DIR_1="/test/durables-dir-1"
 TEST_DURABLE_DIR_2="/test/durables-dir-2"
@@ -63,6 +64,8 @@ TEST_INNER_LAYER_DIR="$TEST_INNER_DEV_DIR/$TEST_OB_REPOSITORY_NAME/layers/$TEST_
 TEST_JOBS_DIR_NAME="jobs"
 
 TEST_MAX_NESTED_MOUNTS=4
+TEST_LOOP_DEVICE=
+TEST_LOOP_DEVICE_LINK=/dev/ob_test_device
 
 test_setupFakeRamfsRoot() {
   test_createOverbootDeviceImage
@@ -73,6 +76,7 @@ test_setupFakeRamfsRoot() {
   mkdir -p "$TEST_RAMFS_DIR/etc"
   mkdir -p "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1"
   mkdir -p "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2"
+  echo "Creating inner layer dir: $TEST_INNER_LAYER_DIR"
   mkdir -p "$TEST_INNER_LAYER_DIR"
 
   echo -n "$TEST_DURABLE_VALUE" >"$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/orig.txt"
@@ -88,6 +92,14 @@ test_setupFakeRamfsRoot() {
   ESCAPED_ROOTMNT_DIR=$(sed 's/[&/\]/\\&/g' <<<"$TEST_ROOTMNT_DIR")
   sed -i "s/%rootmnt%/$ESCAPED_ROOTMNT_DIR/g" "$TEST_RAMFS_DIR/etc/mtab"
 
+  head -c 4M /dev/zero > "$TEST_EMBEDDED_IMG"
+  mke2fs -t ext4 "$TEST_EMBEDDED_IMG"
+  mount -o loop "$TEST_EMBEDDED_IMG" "$TEST_MNT_DIR"
+  mkdir -p "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/layers/$TEST_INNER_LAYER_NAME"
+  umount -f "$TEST_MNT_DIR"
+
+  echo "Remounting RO: $TEST_ROOTMNT_DIR"
+  lsof "$TEST_ROOTMNT_DIR" ||:
   mount -o remount,ro "$TEST_ROOTMNT_DIR"
 }
 
@@ -104,19 +116,22 @@ test_createOverbootDeviceImage() {
 
   mkdir -p "$TEST_MNT_DIR"
 
-  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
+  TEST_LOOP_DEVICE=$(losetup -P --show -f "$TEST_OB_DEVICE_PATH")
+  ln $TEST_LOOP_DEVICE $TEST_LOOP_DEVICE_LINK
+
+  mount $TEST_LOOP_DEVICE "$TEST_MNT_DIR"
 
   mkdir -p "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME"
   cp -r "$TEST_RES_DIR/layers" "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/"
   mkdir -p "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME"
   sync
-  umount -fl "$TEST_MNT_DIR"
+  umount -f "$TEST_MNT_DIR"
 }
 
 test_unmountAll() {
   for u in $(seq $TEST_MAX_NESTED_MOUNTS); do
     for i in $(awk "\$2 ~ \"^$TEST_TMP_DIR\" { print \$2 }" /proc/mounts); do
-      umount -fl "$i" 2>/dev/null || :
+      umount -f "$i" 2>/dev/null || :
     done
   done
 }
@@ -124,8 +139,12 @@ test_unmountAll() {
 test_cleanup() {
   sync -f "$TEST_TMP_DIR"
   sleep 0.1s
+
+  losetup -d $TEST_LOOP_DEVICE
+  rm $TEST_LOOP_DEVICE_LINK
   test_unmountAll
   rm -r "$TEST_TMP_DIR"
+  
 }
 
 test_isMounted() {

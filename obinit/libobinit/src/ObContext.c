@@ -22,12 +22,6 @@ static const char* DEFAULT_HEAD_LAYER = "root";
 static const char* DEFAULT_REPO_NAME = "overboot";
 static const char* DEFAULT_CONFIG_DIR = "overboot.d";
 
-static bool obIsValidDevice(const char* path)
-{
-  return obIsBlockDevice(path)
-      || obIsFile(path);
-}
-
 
 // --------- public API ---------- //
 
@@ -49,6 +43,8 @@ void obInitializeObContext(ObContext* context, const char* prefix)
 
   config->durable = NULL;
 
+  context->foundDevicePath = sdsempty();
+
   context->devMountPoint = sdsnew(prefix);
   context->devMountPoint = sdscat(context->devMountPoint, OB_DEV_MOUNT_POINT);
 
@@ -65,7 +61,7 @@ void obInitializeObContext(ObContext* context, const char* prefix)
     obLogI("The rootmnt environment variable not set, using %s", context->root);
   }
 
-  context->dirAsDevice = false;
+  context->deviceType = OB_DEV_UNKNOWN;
   context->reloadConfig = false;
 }
 
@@ -78,6 +74,7 @@ ObContext* obCreateObContext(const char* prefix)
 
 void obFreeObContext(ObContext** context)
 {
+  sdsfree((*context)->foundDevicePath);
   sdsfree((*context)->devMountPoint);
   sdsfree((*context)->overbootDir);
   sdsfree((*context)->root);
@@ -89,32 +86,54 @@ void obFreeObContext(ObContext** context)
 bool obFindDevice(ObContext* context)
 {
   ObConfig* config = &context->config;
-  bool result = true;
 
+  // UUID
   if (obIsUuid(config->devicePath)
       && !obGetPathByUuid(config->devicePath, OB_PATH_MAX)) {
+    context->deviceType = OB_DEV_BLK;
     return false;
   }
 
-  //TODO: use sds?
-  if (!obIsValidDevice(config->devicePath)) {
-    char newPath[OB_DEV_PATH_MAX];
-    strcpy(newPath, config->prefix);
-    strncat(newPath, config->devicePath, OB_DEV_PATH_MAX);
-    if (!obIsValidDevice(newPath)) {
-      strcpy(newPath, config->prefix);
-      strcat(newPath, context->root);
-      strncat(newPath, config->devicePath, OB_DEV_PATH_MAX);
-      if (!obIsValidDevice(newPath)
-          || obIsDirectory(newPath)) {
-        result = false;
-      }
+  if (strlen(config->devicePath) && config->devicePath[0] != '/') {
+    obLogE("%s does not look like path nor valid UUID, aborting", config->devicePath);
+    return false;
+  }
+
+  // block device
+  if (obExists(config->devicePath)) {
+    if (!obIsBlockDevice(config->devicePath)) {
+      obLogE("Device is not a block device: %s", config->devicePath);
+      return false;
     }
-    if (result) {
-      strcpy(config->devicePath, newPath);
+    context->deviceType = OB_DEV_BLK;
+    context->foundDevicePath = sdscpy(context->foundDevicePath, config->devicePath);
+    return true;
+  }
+
+  // image file
+  bool imgFound = true;
+  sds newPath = sdsnew(config->prefix);
+  newPath = sdscatfmt(newPath, "/%s", config->devicePath);
+  if (!obIsFile(newPath)) {
+    newPath = sdscpy(newPath, context->root);
+    newPath = sdscatfmt(newPath, "/%s", config->devicePath);
+    if (!obIsFile(newPath)) {
+      imgFound = false;
     }
   }
-  return result;
+
+  sdsfree(context->foundDevicePath);
+  context->foundDevicePath = newPath;
+
+  if (imgFound) {
+    context->deviceType = OB_DEV_IMG;
+  }
+  else {
+    obLogI("Device not found, using %s as an embedded repository ", newPath);
+    context->deviceType = OB_DEV_DIR;
+  }
+
+  return true;
 }
 
 void obLogObContext(const ObContext* context)
