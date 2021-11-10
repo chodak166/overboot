@@ -177,7 +177,6 @@ bool obIsBlockDevice(const char* path)
 {
   struct stat fileStat;
   int stRet = stat(path, &fileStat);
-  obLogI("Device mode: %i", fileStat.st_mode);
   return stRet == 0 && S_ISBLK(fileStat.st_mode);
 }
 

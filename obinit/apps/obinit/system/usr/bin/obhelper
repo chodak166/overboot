@@ -63,8 +63,7 @@ STDOUT=`readlink -f /proc/$$/fd/1`
 STDERR=`readlink -f /proc/$$/fd/2`
 
 EDIT_COMMANDS=(micro nano vim vi editor)
-DEV_FS_TYPES=(ext4)
-#DEV_FS_TYPES=(ext2 ext3 ext4 xfs vfat ntfs) #TODO add fstype in overboot.yaml
+DEV_FS_TYPES=(ext2 ext3 ext4)
 
 args=($@)
 commandName=status
@@ -233,6 +232,18 @@ function confirm {
   fi
 }
 
+promptUser()
+{
+  var=$1
+  prompt="$2"
+  default="$3"
+  echo -ne "$prompt [$default]: "
+  read input
+  if [[ -z "$input" ]]; then
+    input="$default"
+  fi
+  eval ${var}="$input"
+}
 
 obParseMtab()
 {
@@ -316,7 +327,10 @@ obConfigCmd()
     
     local jobFile="$(obPrepareConfigUpdateJobFile)"
     obUserEditFile "$jobFile"
-    if [ $edited = true ]; then
+    if cmp "$jobFile" $OB_CONFIG_FILE; then
+      echo "Configuration file unchanged, no update jobs will be scheduled for the next boot"
+      rm "$jobFile"
+    elif [ $edited = true ]; then
       echo -e "\n${GREEN}Configuration update has been scheduled for the next boot${NC}\n"
     else
       echo -e "\nCannot edit the job file: $jobFile"
@@ -363,14 +377,9 @@ obCommitCmd()
   local nowTsUtc=$(date -u +%Y-%m-%dT%H:%M:%S)
   local underlayer=${obActiveLayers[0]}
 
-  echo -en "\nNew layer name: "
-  read layerName
-
-  echo -en "\nNew layer description: "
-  read layerDesc
-
-  echo -en "\nAuthor name: "
-  read author
+  promptUser layerName "\nNew layer name" "$(date -u +%Y-%m-%d-%H-%M)"
+  promptUser layerDesc "\nNew layer description" ""
+  promptUser author "\nAuthor name" "$USER"
 
   local meta=$(cat << EOF
 name:         "$layerName"
@@ -389,7 +398,6 @@ EOF
     echo "$meta" > "$jobFile"
     echo -e "\n${GREEN}Upper layer commit has been scheduled for the next boot${NC}\n"
 
-    #TODO replace old layer (w/o .xxx) in head: line in config file
     if confirm "\nUpdate configuration file to use the new layer?"; then
       obUpdateHeadLayer "$layerName"
     fi
@@ -422,12 +430,14 @@ obUpdateDevice()
 
   re="(\s+device\s*:\s*)(\S+)"
   if [[ "$str" =~ $re ]]; then
+    local escapedDevice=$(printf '%s\n' "${device}" | sed -e 's/[/]/\\\//g')
     local escapedMatch=$(printf '%s\n' "${BASH_REMATCH[0]}" | sed -e 's/[\"]/\\"/g')
     local escapedMatch=$(printf '%s\n' "${escapedMatch}" | sed -e 's/[/]/\\\//g')
     local escapedMatch="${escapedMatch#"${escapedMatch%%[![:space:]]*}"}" # remove leading whitespace
     local escapedMatch="${escapedMatch%"${escapedMatch##*[![:space:]]}"}" # remove trailing whitespace
-    sed -i "s/$escapedMatch/device: \"$device\"/g" "$jobFile"
-    echo -e "\n${GREEN}Device update has been scheduled for the next boot${NC}\n"
+    sed -i "s/$escapedMatch/device: \"$escapedDevice\"/g" "$jobFile"
+    echo -e "\n${GREEN}Device update has been scheduled for the next boot"
+    echo -e "\n${GREEN}Please run 'obhelper config' and verify the device and the head layer entries${NC}\n"
   else
     echo "Cannot find 'device' entry in $jobFile"
   fi
@@ -437,26 +447,47 @@ obRelocateCmd()
 {
   obFindDeviceCandidates
 
-  if [ ${#DEV_CANDIDATES[@]} -eq 0 ]; then
-    echo "No suitable devices found (non-root ${DEV_FS_TYPES[@]})"
-    return 0
-  fi
-
   echo "Suitable devices:"
   for i in "${!DEV_CANDIDATES[@]}"; do
     echo "[$i] ${DEV_CANDIDATES[$i]}"
   done
+  echo "[e] Embedded EXT4 image"
 
-  echo -en "\nSelect new device number (0-$((${#DEV_CANDIDATES[@]}-1))): "
+  echo -en "\nSelect new device number (0-$((${#DEV_CANDIDATES[@]}-1))/e): "
   read n
 
-  if [ $n -ge 0 ] && [ $n -lt ${#DEV_CANDIDATES[@]} ]; then
+  if [[ "$n" == "e" ]]; then
+    if [[ $obRunning = true ]]; then
+      echo "${RED}Cannot relocate to embedded image when overboot is running. Please disable overboot and try again${NC}"
+      exit 1
+    fi
+    obRelocateToImage
+  elif [ $n -ge 0 ] && [ $n -lt ${#DEV_CANDIDATES[@]} ]; then
     local uuid=$(echo ${DEV_CANDIDATES[$n]} | awk '{print $2}')
     obUpdateDevice "UUID=$uuid"
   else
     echo "Wrong device index"
   fi
 
+}
+
+obRelocateToImage()
+{
+  promptUser image "\nImage file:" /var/obdev.img
+  
+  if [ -e "$image" ] && [ ! -f "$image" ]; then
+    echo "${RED}Cannot relocate to ${image}.${NC} Node exists but does not look like an image"
+    return 1
+  fi
+
+  if [ ! -f "$image" ]; then
+    promptUser size "\nImage size" "4G"
+    echo "Creating image ($size, $image)..."
+    head -c $size /dev/zero > "$image"
+    mke2fs -t ext4 "$image"
+  fi
+
+  obUpdateDevice "$image"
 }
 
 obFindDeviceCandidates()

@@ -29,7 +29,7 @@ bool obMountBlockDevice(const char* device, const char* mountPoint)
   }
 
   int result = mount(device, mountPoint,
-                 OB_DEV_IMAGE_FS, OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS);
+                 OB_DEVICE_FS, OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS);
   if (result != 0) {
     obLogE("Cannot mount %s in %s: %s",
            device, mountPoint, strerror(errno));
@@ -52,14 +52,17 @@ bool obMountImageFile(const char* device, const char* mountPoint)
     return false;
   }
 
-  if (mount(loopDevice, mountPoint, OB_DEV_IMAGE_FS,
+  obLogI("Mounting image file (%s) via loop device: %s", device, loopDevice);
+  bool result = true;
+  if (mount(loopDevice, mountPoint, OB_DEVICE_FS,
             OB_DEV_MOUNT_FLAGS, OB_DEV_MOUNT_OPTIONS) < 0) {
       obLogE("Mounting %s in %s failed with error: %s",
              loopDevice, mountPoint, strerror(errno));
+      result = false;
   }
 
   obFreeLoopDevice(loopDeviceFd);
-  return true;
+  return result;
 }
 
 //bool obMountDevice(const char* device, const char* mountPoint)

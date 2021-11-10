@@ -53,7 +53,7 @@ static bool matchUuid(const char* uuid, const char* devicePath)
   blkid_probe_lookup_value(pr, "USAGE", &usage, &len);
 
   bool match = false;
-  if (strcmp(usage, "filesystem") == 0) {
+  if (len !=0 && strcmp(usage, "filesystem") == 0) {
     blkid_probe_lookup_value(pr, "UUID", &devUuid, &len);
     obLogI("Partition UUID detected, size: %lu, value: %s\n", len, uuid);
     if (strcmp(uuid, devUuid) == 0) {

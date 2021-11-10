@@ -99,8 +99,8 @@
 #define OB_ROOT_MODE 0755
 #endif
 
-#ifndef OB_DEV_IMAGE_FS
-#define OB_DEV_IMAGE_FS "ext4"
+#ifndef OB_DEVICE_FS
+#define OB_DEVICE_FS "ext4"
 #endif
 
 #ifndef OB_DEV_MOUNT_FLAGS

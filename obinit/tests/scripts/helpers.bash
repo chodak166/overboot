@@ -96,16 +96,29 @@ test_setupFakeRamfsRoot() {
   mke2fs -t ext4 "$TEST_EMBEDDED_IMG"
   mount -o loop "$TEST_EMBEDDED_IMG" "$TEST_MNT_DIR"
   mkdir -p "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/layers/$TEST_INNER_LAYER_NAME"
-  umount -f "$TEST_MNT_DIR"
+  umount -fl "$TEST_MNT_DIR"
 
-  echo "Remounting RO: $TEST_ROOTMNT_DIR"
-  lsof "$TEST_ROOTMNT_DIR" ||:
-  mount -o remount,ro "$TEST_ROOTMNT_DIR"
+  sync "$TEST_ROOTMNT_DIR"
+
+  # sometimes root is busy, why?
+  n=5
+  while [ $n -ge 0 ] && ! mount -o remount,ro "$TEST_ROOTMNT_DIR"
+  do
+    echo "root mount point busy, retrying"
+    n=$((n-1));
+    sleep 0.2s
+  done
+
+  if [ $n -eq 0 ]; then
+    echo "Cannot remount $TEST_ROOTMNT_DIR"
+    exit 1
+  fi
 }
 
 test_mountRootmnt() {
+  opt="$1"
   mkdir -p "$TEST_ROOTMNT_DIR"
-  mount -t tmpfs tmpfs "$TEST_ROOTMNT_DIR"
+  mount -t tmpfs $opt tmpfs "$TEST_ROOTMNT_DIR"
 }
 
 test_createOverbootDeviceImage() {
@@ -117,7 +130,7 @@ test_createOverbootDeviceImage() {
   mkdir -p "$TEST_MNT_DIR"
 
   TEST_LOOP_DEVICE=$(losetup -P --show -f "$TEST_OB_DEVICE_PATH")
-  ln $TEST_LOOP_DEVICE $TEST_LOOP_DEVICE_LINK
+  ln -f $TEST_LOOP_DEVICE $TEST_LOOP_DEVICE_LINK
 
   mount $TEST_LOOP_DEVICE "$TEST_MNT_DIR"
 
@@ -125,13 +138,13 @@ test_createOverbootDeviceImage() {
   cp -r "$TEST_RES_DIR/layers" "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/"
   mkdir -p "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME"
   sync
-  umount -f "$TEST_MNT_DIR"
+  umount -fl "$TEST_MNT_DIR"
 }
 
 test_unmountAll() {
   for u in $(seq $TEST_MAX_NESTED_MOUNTS); do
     for i in $(awk "\$2 ~ \"^$TEST_TMP_DIR\" { print \$2 }" /proc/mounts); do
-      umount -f "$i" 2>/dev/null || :
+      umount -fl "$i" 2>/dev/null || :
     done
   done
 }

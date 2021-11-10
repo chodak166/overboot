@@ -62,7 +62,8 @@ ObLayerInfo* obLoadLayerInfoYaml(const char* yamlPath, ObLayerInfo* info)
   obParseYamlFile(info, yamlPath,
                 (ObYamlValueCallback)&onScalarValue,
                 NULL);
-  strncpy(info->rootPath, yamlPath, strlen(yamlPath) - strlen(OB_LAYER_INFO_PATH));
+  size_t len =  strlen(yamlPath) - strlen(OB_LAYER_INFO_PATH);
+  memccpy(info->rootPath, yamlPath, 0, len);
   return info;
 }
 
