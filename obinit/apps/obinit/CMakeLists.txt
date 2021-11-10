@@ -49,8 +49,12 @@ install (
 ################## PACKAGING #################
 
 set(INSTALLER_NAME overboot-init)
-set(INSTALLER_RELEASE 1)
+set(INSTALLER_RELEASE 2)
 set(INSTALLER_DESCRIPTION_SUMMARY "Overboot initialization binary")
 set(INSTALLER_DEPENDS "initramfs-tools")
 
 include(${OB_CMAKE_DIR}/include/cpack-deb.cmake)
+
+# example build:
+# cmake -DCMAKE_TOOLCHAIN_FILE=/opt/toolchain.cmake -DINSTALLER_SYSTEM_ARCH=armhf -DCMAKE_BUILD_TYPE=Release -DPROJECT_VERSION_SUFFIX=-$(git rev-parse --short HEAD) ..
+# find . -name CPackConfig.cmake -exec cpack --config {} \;
