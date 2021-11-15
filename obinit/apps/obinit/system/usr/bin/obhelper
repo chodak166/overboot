@@ -293,7 +293,7 @@ obStatusCmd()
     echo -e "${RED}NOT RUNNING${NC}"
   fi
 
-  echo -en "\nVersion: $(/usr/sbin/obinit -v)\n"
+  echo -en "\nVersion: $(/sbin/obinit -v)\n"
 }
 
 obPrepareConfigUpdateJobFile()

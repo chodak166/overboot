@@ -1,24 +1,28 @@
 enabled: false
-
+config_dir: "overboot.d"
 layers:
   visible: true
-  device: "/var/obdev"
+  device: "/var/obdev.d"
   repository: "overboot"
   head: "root"
-
 upper:
   type: "tmpfs"
   size: "50%"
-#upper:
-  #type: "persistent"
-#upper:
-  #type: "volatile"
 
-durables:
-    - path: "/etc/overboot.yaml"
-      copy_origin: true
-    - path: "/etc/overboot.d"
-      copy_origin: true
+# --- other upper types ---
 
-config_dir: "overboot.d"
+# upper:
+#  type: "persistent"
+
+# upper:
+#   type: "volatile"
+
+# --- example durables ---
+
+# durables:
+#     - path: "/var/lib/mysql" # directory
+#       copy_origin: true
+#     - path: "/var/log/syslog" # file
+#       copy_origin: true
+
 
