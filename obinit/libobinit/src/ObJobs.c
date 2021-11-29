@@ -130,14 +130,14 @@ static bool commitUpperLayer(ObContext* context, const char* jobPath)
   else {
     sds path = sdsnew(newLayerPath);
     path = sdscat(path, "/root");
-    result = obSync(upperPath, path);
+
+    result = obRename(upperPath, path);
 
     path = sdscat(path, OB_LAYER_INFO_PATH);
     result = result && obCopyFile(jobPath, path);
     sdsfree(path);
 
     if (result) {
-      result = obRemoveDirR(upperPath);
       obMkpath(upperPath, OB_MKPATH_MODE);
     }
   }

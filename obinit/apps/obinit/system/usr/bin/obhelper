@@ -28,6 +28,8 @@
 ##
 ## log              - print obinit logs
 ##
+## extend           - add space to a ext-formatted image file
+##
 ## hwreboot         - force instant reboot (not recomended with non-tmpfs upper layer)
 ##
 ## hwpoweroff       - force instant shutdown (not recomended with non-tmpfs upper layer)
@@ -48,7 +50,7 @@
 
 SCRIPT_NAME=obhelper
 SCRIPT_FILENAME=$(basename "$0")
-SCRIPT_VERSION=0.1.0
+SCRIPT_VERSION=0.1.2
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 set -e          # exit on command errors (so you MUST handle exit codes properly!)
@@ -175,6 +177,8 @@ run()
       obSwitchHeadCmd;;
     ('relocate')
       obRelocateCmd;;
+    ('extend')
+      obExtendImageCmd;;
     ('hwpoweroff')
       obHwPoweroffCmd;;
     ('hwreboot')
@@ -238,7 +242,7 @@ promptUser()
   prompt="$2"
   default="$3"
   echo -ne "$prompt [$default]: "
-  read input
+  read -e input
   if [[ -z "$input" ]]; then
     input="$default"
   fi
@@ -328,7 +332,7 @@ obConfigCmd()
     
     local jobFile="$(obPrepareConfigUpdateJobFile)"
     obUserEditFile "$jobFile"
-    if cmp "$jobFile" $OB_CONFIG_FILE; then
+    if cmp --quiet "$jobFile" $OB_CONFIG_FILE; then
       echo "Configuration file unchanged, no update jobs will be scheduled for the next boot"
       rm "$jobFile"
     elif [ $edited = true ]; then
@@ -510,6 +514,32 @@ obFindDeviceCandidates()
     fi
   done
   IFS="$OIFS"
+}
+
+obExtendImageCmd()
+{
+  promptUser imageFile "\nImage file" "/var/obdev.img"
+  if [ -z "$imageFile" ]; then
+    echo "No image file, aborting"
+    exit 1
+  fi
+
+  if [ ! -f "$imageFile" ]; then
+    echo "Image file $imageFile does not exist, aborting"
+    exit 1
+  fi
+
+  local size=$(du --apparent-size -h "$imageFile" | awk '{print $1}')
+  echo -e "\nCurrent image size is $size"
+
+  promptUser extraSpace "\nSpace to be added (K/M/G)" "2G"
+
+  head -c $extraSpace /dev/zero >> "$imageFile"
+  e2fsck -f "$imageFile"
+  resize2fs "$imageFile"
+
+  local size=$(du --apparent-size -h "$imageFile" | awk '{print $1}')
+  echo -e "\nCurrent image size is $size"
 }
 
 obLogCmd()

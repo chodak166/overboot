@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(obinit-bin LANGUAGES C VERSION 0.1.2)
+project(obinit-bin LANGUAGES C VERSION 0.1.3)
 
 set(C_STANDARD 11)
 set(TARGET obinit-bin)
@@ -56,5 +56,5 @@ set(INSTALLER_DEPENDS "initramfs-tools")
 include(${OB_CMAKE_DIR}/include/cpack-deb.cmake)
 
 # example build:
-# cmake -DCMAKE_TOOLCHAIN_FILE=/opt/toolchain.cmake -DINSTALLER_SYSTEM_ARCH=armhf -DCMAKE_BUILD_TYPE=Release -DPROJECT_VERSION_SUFFIX=-$(git rev-parse --short HEAD) ..
+# cmake -DCMAKE_TOOLCHAIN_FILE=/opt/toolchain.cmake -DINSTALLER_SYSTEM_ARCH=armhf -DCMAKE_BUILD_TYPE=Release -DRELEASE_TAG=$(git rev-parse --short HEAD) ..
 # find . -name CPackConfig.cmake -exec cpack --config {} \;

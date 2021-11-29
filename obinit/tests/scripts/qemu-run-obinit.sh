@@ -90,7 +90,7 @@ installObinit()
   fi
 
   cp -v "$OBINIT_CONFIG" "$mntDir/etc/overboot.yaml"
-  cp -v "$OBINIT_BIN" "$mntDir/usr/bin/"
+  cp -v "$OBINIT_BIN" "$mntDir/sbin/"
   cp -v "$OBINIT_DIR/apps/obinit/system/usr/bin/obhelper" "$mntDir/usr/bin/obhelper"
   chmod +x "$mntDir/usr/bin/obhelper"
 

@@ -20,5 +20,6 @@ bool obRemovePath(const char* path);
 bool obCreateBlankFile(const char* path);
 bool obCopyFile(const char* src, const char* dst);
 bool obSync(const char* src, const char* dst);
+bool obRename(const char* src, const char* dst);
 
 #endif // OBOSUTILS_H

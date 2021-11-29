@@ -486,4 +486,34 @@ vgRun()
   [ $vgExitCode -eq 0 ]
 }
 
+@test "obinit should move whiteout files on commit job" {
+  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
+
+  whiteoutFileName=whiteout_test_$RANDOM
+  upperWhiteoutFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/upper/$whiteoutFileName"
+  mkdir -p $(dirname "$upperWhiteoutFile") ||:
+  mknod "$upperWhiteoutFile" c 0 0
+  
+  jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/commit"
+  layerName="new-layer-$RANDOM"
+  echo "name: $layerName" > "$jobFile"
+  jobFileSum=$(md5sum "$jobFile" | awk '{print $1}')
+
+  umount -lf "$TEST_MNT_DIR"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml"
+
+  newLayer="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers/${layerName}.obld"
+  layerMetaFileSum=$(md5sum "$newLayer/root/etc/layer.yaml" | awk '{print $1}')
+
+  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
+
+tree $TEST_TMP_DIR
+
+  [ -d "$newLayer" ]
+  [ ! -c "$upperWhiteoutFile" ]
+  [ -c "$newLayer/root/$whiteoutFileName" ]
+  [ ! -f "$jobFile" ]
+  [ $vgExitCode -eq 0 ]
+}
+
 # TODO: make new layer from root?

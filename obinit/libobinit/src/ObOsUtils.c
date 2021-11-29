@@ -6,6 +6,7 @@
 #include "ObOsUtils.h"
 #include "ob/ObLogging.h"
 #include "ob/ObDefs.h"
+#include <sds.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -292,5 +293,28 @@ bool obSync(const char* src, const char* dst)
   bool result = nftw(src, obSyncCb, NFTW_NOPENFD, FTW_PHYS) >= 0;
   syncSrcDir = NULL;
   syncDstDir = NULL;
+  return result;
+}
+
+bool obRename(const char* src, const char* dst)
+{
+  if (!obExists(src)) {
+    obLogE("Rename failed, the source does not exist: %s", src);
+    return false;
+  }
+
+  sds dstCpy = sdsnew(dst);
+  char* parent = dirname(dstCpy);
+  bool result = true;
+  if (!obExists(parent)) {
+    result = obMkpath(parent, OB_MKPATH_MODE);
+    sdsfree(dstCpy);
+  }
+
+  if (result && rename(src, dst) != 0) {
+    obLogE("Cannot rename %s -> %s: %s", src, dst, strerror(errno));
+    result = false;
+  }
+
   return result;
 }
