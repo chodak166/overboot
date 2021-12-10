@@ -188,7 +188,7 @@ int obMountLoopDevice(const char* imagePath, char* loopDevice)
 
   obLogI("Using loop device: %s", loopDevice);
 
-  int imageFd = open(imagePath, O_RDWR);
+  int imageFd = open64(imagePath, O_RDWR);
   if (imageFd < 0) {
       obLogE("Opening image file (%s) failed: %s", imagePath, strerror(errno));
       return imageFd;

@@ -113,10 +113,10 @@ bool obFindDevice(ObContext* context)
   // image file
   bool imgFound = true;
   sds newPath = sdsnew(config->prefix);
-  newPath = sdscatfmt(newPath, "/%s", config->devicePath);
+  newPath = sdscatfmt(newPath, "%s", config->devicePath);
   if (!obIsFile(newPath)) {
     newPath = sdscpy(newPath, context->root);
-    newPath = sdscatfmt(newPath, "/%s", config->devicePath);
+    newPath = sdscatfmt(newPath, "%s", config->devicePath);
     if (!obIsFile(newPath)) {
       imgFound = false;
     }

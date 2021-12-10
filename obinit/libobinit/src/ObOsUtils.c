@@ -109,8 +109,8 @@ static bool obEnsureParentExists(const char* path)
 
 static bool obCopyFileAttributes(const char* src, const char* dst)
 {
-  struct stat st;
-  if (stat(src, &st) == -1) {
+  struct stat64 st;
+  if (stat64(src, &st) == -1) {
     obLogE("Cannot stat %s", src);
     return false;
   }
@@ -169,22 +169,22 @@ bool obExists(const char* path)
 
 bool obIsFile(const char* path)
 {
-  struct stat fileStat;
-  int stRet = stat(path, &fileStat);
+  struct stat64 fileStat;
+  int stRet = stat64(path, &fileStat);
   return stRet == 0 && S_ISREG(fileStat.st_mode);
 }
 
 bool obIsBlockDevice(const char* path)
 {
-  struct stat fileStat;
-  int stRet = stat(path, &fileStat);
+  struct stat64 fileStat;
+  int stRet = stat64(path, &fileStat);
   return stRet == 0 && S_ISBLK(fileStat.st_mode);
 }
 
 bool obIsDirectory(const char* path)
 {
-  struct stat fileStat;
-  int stRet = stat(path, &fileStat);
+  struct stat64 fileStat;
+  int stRet = stat64(path, &fileStat);
   return stRet == 0 && S_ISDIR(fileStat.st_mode);
 }
 

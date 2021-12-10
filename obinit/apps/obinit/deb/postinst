@@ -24,9 +24,9 @@ if grep Hardware /proc/cpuinfo | grep -qi bcm; then
 echo "Updating /boot/config.txt"
 
 if grep -q 'initramfs ' /boot/config.txt; then
-  sed -i "s|^initramfs .*|initramfs initrd.img-$(uname -r)|" /boot/config.txt
+  sed -i "s|^initramfs .*|initramfs initrd.img-\$(uname -r)|" /boot/config.txt
 else
-  echo -e "\ninitramfs initrd.img-$(uname -r)" >> /boot/config.txt
+  echo -e "\ninitramfs initrd.img-\$(uname -r)" >> /boot/config.txt
 fi
 EOL
   chmod +x $updateConfigHook
