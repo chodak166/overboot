@@ -19,11 +19,12 @@ static void obCountDurablesRecursive(ObDurable* durable, int* count)
 
 // --------- public API ---------- //
 
-void obAddDurable(ObConfig* config, const char* path, bool copyOrigin)
+void obAddDurable(ObConfig* config, const char* path)
 {
   ObDurable* durable = malloc(sizeof(ObDurable));
   strcpy(durable->path, path);
-  durable->copyOrigin = copyOrigin;
+  durable->copyOrigin = false;
+  durable->forceFileType = false;
   durable->next = config->durable;
   config->durable = durable;
 }

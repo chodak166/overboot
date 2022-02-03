@@ -14,6 +14,7 @@ typedef struct ObDurable
 {
   char path[OB_PATH_MAX];
   bool copyOrigin;
+  bool forceFileType;
   struct ObDurable* next;
 } ObDurable;
 
@@ -38,7 +39,7 @@ typedef struct ObConfig
 } ObConfig;
 
 
-void obAddDurable(ObConfig* config, const char* path, bool copyOrigin);
+void obAddDurable(ObConfig* config, const char* path);
 
 int obCountDurables(const ObConfig* config);
 

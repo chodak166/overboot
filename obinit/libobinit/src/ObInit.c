@@ -379,8 +379,14 @@ bool obInitDurables(ObContext* context)
     obLogI("Preparing durable %s", bindPath);
 
     if (!obExists(bindPath)) {
-      obMkpath(bindPath, OB_MKPATH_MODE);
-      obMkpath(persistentPath, OB_MKPATH_MODE);
+      if (durable->forceFileType) {
+        obCreateBlankFile(bindPath);
+        obCreateBlankFile(persistentPath);
+      }
+      else {
+        obMkpath(bindPath, OB_MKPATH_MODE);
+        obMkpath(persistentPath, OB_MKPATH_MODE);
+      }
     }
     else {
       bool isDir = obIsDirectory(bindPath);

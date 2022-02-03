@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(obinit-bin LANGUAGES C VERSION 0.1.3)
+project(obinit-bin LANGUAGES C VERSION 0.1.4)
 
 set(C_STANDARD 11)
 set(TARGET obinit-bin)

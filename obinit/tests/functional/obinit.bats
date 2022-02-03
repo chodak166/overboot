@@ -50,7 +50,7 @@ vgRun()
 
 
 @test "obinit should mount data device by UUID" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-uuid.yaml" ||:
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-uuid.yaml" ||:  
 
   [ $(test_isMounted "$TEST_OB_DEVICE_MNT_PATH") -eq 0 ]
   [ $vgExitCode -eq 0 ]
@@ -160,7 +160,7 @@ vgRun()
 }
 
 
-@test "obinit should bind durable directories and overlay origin if the configuration says so" {
+@test "obinit should bind durable directories and overlay the origin if the configuration says so" {
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
 
   testFileName="${RANDOM}-$(date +%s).test"
@@ -171,7 +171,7 @@ vgRun()
   [ $vgExitCode -eq 0 ]
 }
 
-@test "obinit should bind durable directories and copy origin if the configuration says so" {
+@test "obinit should bind durable directories and copy the original directory if the configuration says so" {
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
 
   testFileName="${RANDOM}-$(date +%s).test"
@@ -238,6 +238,24 @@ vgRun()
 
   [ -f "$persistentFile" ]
   [[ "$(cat "$persistentFile")" == "$testValue" ]]
+  [ $vgExitCode -eq 0 ]
+}
+
+@test "obinit should create an empty durable directory if there is no original file or directory and the default type is directory or is undefined" {
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  
+  createdDurable="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_NO_ORIGIN"
+
+  [ -d "$createdDurable" ]
+  [ $vgExitCode -eq 0 ]
+}
+
+@test "obinit should create ab empty durable file if there is no original file or directory and the default type is file" {
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  
+  createdDurable="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_NO_ORIGIN"
+
+  [ -f "$createdDurable" ]
   [ $vgExitCode -eq 0 ]
 }
 

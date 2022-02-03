@@ -21,4 +21,8 @@ durables:
       copy_origin: false
     - path: "/test/persistent_file_2"
       copy_origin: true
+    - path: "/test/durable_dir_with_no_origin"
+      # default_type: "directory"
+    - path: "/test/durable_file_with_no_origin"
+      default_type: "file"
 

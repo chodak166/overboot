@@ -49,6 +49,8 @@ TEST_DURABLE_DIR_1="/test/durables-dir-1"
 TEST_DURABLE_DIR_2="/test/durables-dir-2"
 TEST_DURABLE_FILE_1="/test/persistent_file_1"
 TEST_DURABLE_FILE_2="/test/persistent_file_2"
+TEST_DURABLE_DIR_NO_ORIGIN="/test/durable_dir_with_no_origin"
+TEST_DURABLE_FILE_NO_ORIGIN="/test/durable_file_with_no_origin"
 TEST_DURABLE_VALUE="durable value"
 
 TEST_LAYER_1_NAME="first-test-layer.obld"

@@ -50,6 +50,10 @@ static void onScalarValue(ObConfig* config, const char* itemPath, const char* va
            && config->durable != NULL) {
     config->durable->copyOrigin = strcmp(value, "true") == 0 ? true : false;
   }
+  else if (strcmp(itemPath, ".durables..default_type") == 0
+           && config->durable != NULL) {
+    config->durable->forceFileType = strcmp(value, "file") == 0 ? true : false;
+  }
   else if (strcmp(itemPath, ".config_dir") == 0) {
     strcpy(config->configDir, value);
   }
@@ -62,7 +66,7 @@ static void onScalarValue(ObConfig* config, const char* itemPath, const char* va
 static void onSequenceEntryStart(ObConfig* config, const char* itemPath)
 {
   if (strcmp(itemPath, ".durables") == 0) {
-    obAddDurable(config, "", false);
+    obAddDurable(config, "");
   }
 }
 

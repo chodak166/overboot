@@ -44,29 +44,6 @@ int main(int argc, char* argv[])
     exit(options.exitStatus);
   }
 
-//  ObContext* context = NULL;
-//  loadContext(&context, &options);
-//  ObConfig* config = &context->config;
-
-//  int exitCode = EXIT_SUCCESS;
-
-//  size_t maxReloads = OB_MAX_CONFIG_RELOADS;
-//  if (config->enabled) {
-//    do {
-//      context->reloadConfig = false;
-//      exitCode = obExecObInitTasks(context) ? EXIT_SUCCESS : EXIT_FAILURE;
-//      if (context->reloadConfig) {
-//        obLogI("Reloading configuration file due to the config-update job execution");
-//        maxReloads -= 1;
-//        loadContext(&context, &options);
-//        context->reloadConfig = true;
-//        config = &context->config;
-//      }
-//    } while (context->reloadConfig && config->enabled && maxReloads > 0);
-//  }
-
-
-
   ObContext* context = NULL;
   int exitCode = EXIT_SUCCESS;
   size_t maxReloads = OB_MAX_CONFIG_RELOADS;

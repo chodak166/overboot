@@ -13,5 +13,5 @@ if [[ "$propagation" != "private" ]]; then
 fi
 
 cd ../functional
-sudo -E -S bats . < "$SCRIPT_DIR/secret.tmp"
+sudo -E -S bats -f "$1" . < "$SCRIPT_DIR/secret.tmp"
 
