@@ -463,7 +463,7 @@ obRelocateCmd()
 
   if [[ "$n" == "e" ]]; then
     if [[ $obRunning = true ]]; then
-      echo "${RED}Cannot relocate to embedded image when overboot is running. Please disable overboot and try again${NC}"
+      echo -e "${RED}Cannot relocate to embedded image when overboot is running. Please disable overboot and try again${NC}"
       exit 1
     fi
     obRelocateToImage
@@ -481,7 +481,7 @@ obRelocateToImage()
   promptUser image "\nImage file:" /var/obdev.img
   
   if [ -e "$image" ] && [ ! -f "$image" ]; then
-    echo "${RED}Cannot relocate to ${image}.${NC} Node exists but does not look like an image"
+    echo -e "${RED}Cannot relocate to ${image}.${NC} Node exists but does not look like an image"
     return 1
   fi
 
