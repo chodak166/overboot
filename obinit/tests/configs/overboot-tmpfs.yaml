@@ -8,6 +8,9 @@ layers:
 upper:
   type: "tmpfs"
   size: "4096k"
+
+safe_mode: true
+
 #upper:
   #type: "persistent"
 #upper:

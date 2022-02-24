@@ -87,9 +87,7 @@ vgRun()
  
   mkdir -p $(dirname "$SAMPLE_FILE")
   echo $RANDOM > "$SAMPLE_FILE"
- 
-  mount
- 
+  
   mount | grep -q "$TEST_ROOTMNT_BINDINGS_DIR/upper type"
   mntStatus=$?
    
@@ -120,7 +118,7 @@ vgRun()
   [ $vgExitCode -eq 0 ]
 }
 
-@test "obinit should mount overlayfs in rootmnt when the upper layer is tmpfs" {
+@test "obinit should mount overlayfs upper dir from ramdisk when configured as tmpfs" {
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
   testFileName=test-$RANDOM.file
   touch "$TEST_ROOTMNT_DIR/$testFileName"
@@ -129,12 +127,43 @@ vgRun()
   [ $vgExitCode -eq 0 ]
 }
 
-@test "obinit should mount overlayfs in rootmnt when the upper layer is persistent" {
+@test "obinit should mount overlayfs upper dir from repository when configured as persistent" {
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml" > /tmp/obinit.log
   testFileName=test-$RANDOM.file
   touch "$TEST_ROOTMNT_DIR/$testFileName"
  
   [ -f "$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/upper/$testFileName" ]
+  [ $vgExitCode -eq 0 ]
+}
+
+@test "obinit should mount persistent upper under the tmpfs when the configuration says so" {
+  
+  testFileName="${RANDOM}-$(date +%s).test"
+  persistentUpper="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/upper"
+  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
+  mkdir "$persistentUpper"
+  touch "$persistentUpper/$testFileName"
+  tree $TEST_RAMFS_DIR
+  umount -fl "$TEST_MNT_DIR"
+
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-upper.yaml"
+
+  [ -f "$TEST_ROOTMNT_DIR/$testFileName" ]
+  [ $vgExitCode -eq 0 ]
+}
+
+@test "obinit should not mount persistent upper under the tmpfs when the configuration says so" {
+  
+  testFileName="${RANDOM}-$(date +%s).test"
+  persistentUpper="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/upper"
+  mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
+  mkdir "$persistentUpper"
+  touch "$persistentUpper/$testFileName"
+  umount -fl "$TEST_MNT_DIR"
+
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+
+  [ ! -f "$TEST_ROOTMNT_DIR/$testFileName" ]
   [ $vgExitCode -eq 0 ]
 }
 
@@ -241,21 +270,28 @@ vgRun()
   [ $vgExitCode -eq 0 ]
 }
 
-@test "obinit should create an empty durable directory if there is no original file or directory and the default type is directory or is undefined" {
+@test "obinit should create and bind an empty durable directory if there is no original file or directory and the default type is directory or is undefined" {
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
   
   createdDurable="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_NO_ORIGIN"
 
+  testFileName="${RANDOM}-$(date +%s).test"
+  touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_NO_ORIGIN/$testFileName"
+  
   [ -d "$createdDurable" ]
+  [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_NO_ORIGIN/$testFileName" ]
   [ $vgExitCode -eq 0 ]
 }
 
-@test "obinit should create ab empty durable file if there is no original file or directory and the default type is file" {
+@test "obinit should create and bind empty durable file if there is no original file or directory and the default type is file" {
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
   
   createdDurable="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_NO_ORIGIN"
 
+  echo $RANDOM >> "$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_NO_ORIGIN"
+
   [ -f "$createdDurable" ]
+  cmp -s "$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_NO_ORIGIN" "$createdDurable"
   [ $vgExitCode -eq 0 ]
 }
 
@@ -396,6 +432,8 @@ vgRun()
   [ $vgExitCode -ne 0 ]
   [ ! -d "$TEST_OB_OVERLAY_DIR" ]
 }
+
+# --- safe mode ---
 
 # --- jobs ---
 

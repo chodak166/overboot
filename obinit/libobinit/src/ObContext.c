@@ -40,6 +40,7 @@ void obInitializeObContext(ObContext* context, const char* prefix)
   config->useTmpfs = true;
   config->clearUpper = false;
   config->rollback = false;
+  config->upperAsLower = false;
 
   config->durable = NULL;
 

@@ -14,6 +14,8 @@ sds obGetRepoPath(const ObContext* context);
 
 sds obGetLowerRootPath(const ObContext* context);
 
+sds obGetPersistentUpperPath(const ObContext* context);
+
 sds obGetUpperPath(const ObContext* context);
 
 sds obGetBindedUpperPath(const ObContext* context);

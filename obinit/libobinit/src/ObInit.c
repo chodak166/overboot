@@ -259,6 +259,16 @@ bool obInitOverlayfs(ObContext* context)
     count = 1;
   }
 
+  if (config->useTmpfs && config->upperAsLower) {
+    ObLayerItem* extraLayer = calloc(1, sizeof(ObLayerItem));
+    sds persistentUpperPath = obGetPersistentUpperPath(context);
+    strcpy(extraLayer->layerPath, persistentUpperPath);
+    sdsfree(persistentUpperPath);
+    extraLayer->prev = topLayer;
+    topLayer = extraLayer;
+    count += 1;
+  }
+
   char* layers[count];
 
   obLogI("Collected layers:");
@@ -404,8 +414,6 @@ bool obInitDurables(ObContext* context)
       else if (!isDir && !obExists(persistentPath)) {
         obLogI("This durable is not a directory");
         if (durable->copyOrigin) {
-          // TODO: debug this error:
-          // Cannot copy /root/etc/overboot.yaml to /obmnt/overboot/durables/etc/overboot.yaml: Invalid cross-device link
           obLogI("Copying original file from %s to %s", bindPath, persistentPath);
           if (!obCopyFile(bindPath, persistentPath)) {
             obLogE("Copying originl file failed");

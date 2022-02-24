@@ -17,18 +17,23 @@ sds obGetLowerRootPath(const ObContext* context)
   return sdscat(lowerPath, "/lower-root");
 }
 
+sds obGetPersistentUpperPath(const ObContext* context)
+{
+  sds path = obGetRepoPath(context);
+  return sdscat(path, "/upper");
+}
+
 sds obGetUpperPath(const ObContext* context)
 {
   sds upperPath = NULL;
   if (context->config.useTmpfs) {
     upperPath = sdsnew(context->overbootDir);
+    upperPath = sdscat(upperPath, "/upper");
   }
   else {
-    sds repoPath = obGetRepoPath(context);
-    upperPath = sdsnew(repoPath);
-    sdsfree(repoPath);
+    upperPath = obGetPersistentUpperPath(context);
   }
-  return sdscat(upperPath, "/upper");
+  return upperPath;
 }
 
 sds obGetBindedUpperPath(const ObContext* context)

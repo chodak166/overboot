@@ -116,7 +116,11 @@ static bool updateFstabWithMtabEntry(const char* fstabPath,
                              const char* mtabEntry)
 {
   sds fstabPathOrig = obGetRootFstabBackupPath(fstabPath);
-  rename(fstabPath, fstabPathOrig);
+  if (rename(fstabPath, fstabPathOrig) != 0) {
+    obLogE("Cannot rename %s to %s: %s", fstabPath, fstabPathOrig, strerror(errno));
+    sdsfree(fstabPathOrig);
+    return false;
+  }
 
   FILE* origFile = NULL;
   FILE* file = NULL;

@@ -36,11 +36,14 @@ static void onScalarValue(ObConfig* config, const char* itemPath, const char* va
     strcpy(config->headLayer, value);
   }
   else if (strcmp(itemPath, ".upper.type") == 0) {
-    config->useTmpfs = strcmp(value, "tmpfs") == 0 ? true : false;
-    config->clearUpper = strcmp(value, "volatile") == 0 ? true : false;
+    config->useTmpfs = strcmp(value, "tmpfs") == 0;
+    config->clearUpper = strcmp(value, "volatile") == 0;
   }
   else if (strcmp(itemPath, ".upper.size") == 0) {
     strcpy(config->tmpfsSize, value);
+  }
+  else if (strcmp(itemPath, ".upper.include_persistent_upper") == 0) {
+    config->upperAsLower = strcmp(value, "true") == 0;
   }
   else if (strcmp(itemPath, ".durables..path") == 0
            && config->durable != NULL) {
@@ -48,17 +51,17 @@ static void onScalarValue(ObConfig* config, const char* itemPath, const char* va
   }
   else if (strcmp(itemPath, ".durables..copy_origin") == 0
            && config->durable != NULL) {
-    config->durable->copyOrigin = strcmp(value, "true") == 0 ? true : false;
+    config->durable->copyOrigin = strcmp(value, "true") == 0;
   }
   else if (strcmp(itemPath, ".durables..default_type") == 0
            && config->durable != NULL) {
-    config->durable->forceFileType = strcmp(value, "file") == 0 ? true : false;
+    config->durable->forceFileType = strcmp(value, "file") == 0;
   }
   else if (strcmp(itemPath, ".config_dir") == 0) {
     strcpy(config->configDir, value);
   }
   else if (strcmp(itemPath, ".rollback") == 0) {
-    config->rollback = strcmp(value, "true") == 0 ? true : false;
+    config->rollback = strcmp(value, "true") == 0;
   }
 }
 

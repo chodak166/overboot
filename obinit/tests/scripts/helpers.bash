@@ -185,3 +185,10 @@ test_waitForCont() {
   done
   rm /tmp/cont
 }
+
+test_getPathFsType()
+{
+  local path="$1"
+  local value=$(df -TP $path | tail -1 | awk '{print $2}')
+  echo $value
+}

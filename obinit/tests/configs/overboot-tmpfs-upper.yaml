@@ -1,0 +1,11 @@
+enabled: true
+config_dir: "test-overboot.d"
+layers:
+  visible: true
+  device: "/dev/ob_test_device"
+  repository: "overboot"
+  head: "third-test-layer"
+upper:
+  type: "tmpfs"
+  size: "4096k"
+  include_persistent_upper: true

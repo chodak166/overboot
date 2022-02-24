@@ -227,7 +227,6 @@ bool obMountOverlay(char** layers, int layerCount, const char* upper,
   lowerLayers[0] = '\0';
 
   for (int i = layerCount -1; i >=0; --i) {
-    obLogI("Layer: %s", layers[i]);
     strcat(lowerLayers, layers[i]);
     if (i != 0) {
       strcat(lowerLayers, ":");
