@@ -1,9 +1,5 @@
-enabled: true
 layers:
   visible: true
   device: "/var/obdev.d"
   repository: "overboot"
   head: "root"
-upper:
-  type: "tmpfs"
-  size: "4096k"

@@ -41,7 +41,6 @@ TEST_OB_DEVICE_UUID="ddbdd956-4bef-4c43-b99f-6a7ae2a95a86"
 TEST_OB_DEVICE_PATH="$TEST_RAMFS_DIR/dev/ob_test.img"
 TEST_OB_DEVICE_MNT_PATH="$TEST_RAMFS_DIR/obmnt"
 TEST_OB_REPOSITORY_NAME="overboot"
-TEST_OB_CONFIG_PATH="$TEST_ROOTMNT_DIR/etc/overboot.yaml"
 TEST_DURABLES_STORAGE_DIR="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/durables"
 TEST_EMBEDDED_IMG="$TEST_ROOTMNT_DIR/var/obdev.img"
 
@@ -59,7 +58,7 @@ TEST_LAYER_3_NAME="third-test-layer.obld"
 
 TEST_OB_OVERLAY_DIR="$TEST_RAMFS_DIR/overlay"
 
-TEST_INNER_DEV_DIR="$TEST_ROOTMNT_DIR/var/obdev"
+TEST_INNER_DEV_DIR="$TEST_ROOTMNT_DIR/var/obdev.d"
 TEST_INNER_LAYER_NAME="internal-test-layer"
 TEST_INNER_LAYER_DIR="$TEST_INNER_DEV_DIR/$TEST_OB_REPOSITORY_NAME/layers/$TEST_INNER_LAYER_NAME"
 
@@ -86,7 +85,6 @@ test_setupFakeRamfsRoot() {
   echo -n "$TEST_DURABLE_VALUE" >"$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_1"
   echo -n "$TEST_DURABLE_VALUE" >"$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_2"
 
-  cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$TEST_ROOTMNT_DIR/etc/overboot.yaml"
   cp -v "$TEST_RES_DIR/fstab" "$TEST_ROOTMNT_DIR/etc/fstab"
   cp "$TEST_RES_DIR/fstab-parsed" "$TEST_TMP_DIR/"
   cp "$TEST_RES_DIR/mtab" "$TEST_RAMFS_DIR/etc/mtab"
@@ -191,4 +189,16 @@ test_getPathFsType()
   local path="$1"
   local value=$(df -TP $path | tail -1 | awk '{print $2}')
   echo $value
+}
+
+test_composeConfig()
+{
+  partials=($@)
+  export TEST_COMPOSED_CONFIG="$TEST_ROOTMNT_DIR/etc/overboot.yaml"
+  mount -o remount,rw "$TEST_ROOTMNT_DIR"
+  for partial in ${partials[@]}; do
+    cat "$TEST_CONFIGS_DIR/overboot-${partial}.yaml" >> "$TEST_COMPOSED_CONFIG"
+  done
+  cp -r "$TEST_CONFIGS_DIR/test-overboot.d" "$TEST_ROOTMNT_DIR/etc/"
+  mount -o remount,ro "$TEST_ROOTMNT_DIR"
 }

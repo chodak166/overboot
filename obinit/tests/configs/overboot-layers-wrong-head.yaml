@@ -1,10 +1,5 @@
-enabled: true
-config_dir: ""
 layers:
   visible: true
   device: "/dev/ob_test.img"
   repository: "overboot"
   head: "non-existing-layer"
-upper:
-  type: "tmpfs"
-  size: "4096k"

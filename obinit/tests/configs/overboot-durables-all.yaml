@@ -1,17 +1,3 @@
-enabled: true
-config_dir: ""
-layers:
-  visible: true
-  device: "/dev/ob_test_device"
-  repository: "overboot"
-#  head:
-upper:
-  type: "tmpfs"
-  size: "4096k"
-#upper:
-  #type: "persistent"
-#upper:
-  #type: "volatile"
 durables:
     - path: "/test/durables-dir-1"
       copy_origin: false
@@ -21,3 +7,7 @@ durables:
       copy_origin: false
     - path: "/test/persistent_file_2"
       copy_origin: true
+    - path: "/test/durable_dir_with_no_origin"
+      default_type: "directory"
+    - path: "/test/durable_file_with_no_origin"
+      default_type: "file"

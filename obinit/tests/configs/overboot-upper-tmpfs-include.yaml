@@ -1,0 +1,4 @@
+upper:
+  type: "tmpfs"
+  size: "4096k"
+  include_persistent_upper: true

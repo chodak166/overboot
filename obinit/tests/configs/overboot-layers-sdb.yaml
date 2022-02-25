@@ -1,0 +1,5 @@
+layers:
+  visible: true
+  device: "/dev/sdb"
+  repository: "overboot"
+  head: "third-test-layer"

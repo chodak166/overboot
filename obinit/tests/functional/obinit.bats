@@ -20,12 +20,12 @@ teardown()
 vgRun()
 {
   if command -v valgrind &>/dev/null; then
-    vgLog="$TEST_TMP_DIR/valgrind-${RANDOM}.log"
+    local vgLog="$TEST_TMP_DIR/valgrind-${RANDOM}.log"
     vgExitCode=0
     valgrind -q --leak-check=full --track-origins=yes \
       "$@" 2> "$vgLog" || vgExitCode=$?
 
-    leaks=true
+    local leaks=true
     cat "$vgLog" | grep -q "lost" || leaks=false
     cat "$vgLog"
     [ $leaks = false ]
@@ -36,28 +36,31 @@ vgRun()
 }
 
 @test "obinit should mount data device by path" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
   [ $(test_isMounted "$TEST_OB_DEVICE_MNT_PATH") -eq 0 ]
   [ $vgExitCode -eq 0 ]
 }
 
 @test "obinit should not mount data device and exit with success when disabled in the configuration file" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-disabled.yaml"
+  test_composeConfig disabled layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
    
   [ ! $(test_isMounted "$TEST_OB_DEVICE_MNT_PATH") -eq 0 ]
   [ $vgExitCode -eq 0 ]
 }
 
-
 @test "obinit should mount data device by UUID" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-uuid.yaml" ||:  
+  test_composeConfig enabled layers-uuid upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG" ||:  
 
   [ $(test_isMounted "$TEST_OB_DEVICE_MNT_PATH") -eq 0 ]
   [ $vgExitCode -eq 0 ]
 }
 
 @test "obinit should prepare overlay directory" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
    
   [ -d "$TEST_OB_OVERLAY_DIR" ]
   [ -d "$TEST_OB_OVERLAY_DIR/work" ]
@@ -68,30 +71,29 @@ vgRun()
 }
 
 @test "obinit should set tmpfs size as configured" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
-  expectedSize=$(cat "$TEST_OB_CONFIG_PATH" | yq -r ".upper.size")
-  actualSize=$(df -Pk "$TEST_OB_OVERLAY_DIR" | tail -1 | awk '{print $2}')k
+  test_composeConfig enabled layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
+  local expectedSize=$(cat "$TEST_COMPOSED_CONFIG" | yq -r ".upper.size")
+  local actualSize=$(df -Pk "$TEST_OB_OVERLAY_DIR" | tail -1 | awk '{print $2}')k
  
-  echo "expected size: $expectedSize"
-  echo "actual size: $actualSize"
   [[ "$expectedSize" == "$actualSize" ]]
   [ $vgExitCode -eq 0 ]
 }
 
 @test "obinit should bind upper directory from the persistent device if configured" {
+  test_composeConfig enabled layers-loop upper-persistent
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml"
-
-  SAMPLE_FILE="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/upper/binded_upper_sample_file"
-  BINDED_SAMPLE_FILE="$TEST_ROOTMNT_BINDINGS_DIR/upper/binded_upper_sample_file"
+  local SAMPLE_FILE="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/upper/binded_upper_sample_file"
+  local BINDED_SAMPLE_FILE="$TEST_ROOTMNT_BINDINGS_DIR/upper/binded_upper_sample_file"
  
   mkdir -p $(dirname "$SAMPLE_FILE")
   echo $RANDOM > "$SAMPLE_FILE"
   
   mount | grep -q "$TEST_ROOTMNT_BINDINGS_DIR/upper type"
-  mntStatus=$?
+  local mntStatus=$?
    
-  mntTmpfsStatus=0
+  local mntTmpfsStatus=0
   mount | grep -q "$TEST_ROOTMNT_BINDINGS_DIR/upper type tmpfs" || mntTmpfsStatus=1
   
   cmp "$SAMPLE_FILE" "$BINDED_SAMPLE_FILE"
@@ -101,26 +103,30 @@ vgRun()
 }
 
 @test "obinit should clear upper if configured" {
-  SAMPLE_FILE="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/upper/subdir/removeme"
+  local SAMPLE_FILE="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/upper/subdir/removeme"
   mkdir -p $(dirname "$SAMPLE_FILE")
   touch "$SAMPLE_FILE"
    
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-volatile.yaml"
+  test_composeConfig enabled layers-loop upper-volatile
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
    
   [ ! -f "$SAMPLE_FILE" ]
   [ $vgExitCode -eq 0 ]
 }
 
 @test "obinit should move rootmnt to the lower layer directory" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
  
   [ -f "$TEST_OB_OVERLAY_DIR/lower-root/etc/fstab" ]
   [ $vgExitCode -eq 0 ]
 }
 
 @test "obinit should mount overlayfs upper dir from ramdisk when configured as tmpfs" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
-  testFileName=test-$RANDOM.file
+  test_composeConfig enabled layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
+  
+  local testFileName=test-$RANDOM.file
   touch "$TEST_ROOTMNT_DIR/$testFileName"
  
   [ -f "$TEST_OB_OVERLAY_DIR/upper/$testFileName" ]
@@ -128,8 +134,10 @@ vgRun()
 }
 
 @test "obinit should mount overlayfs upper dir from repository when configured as persistent" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml" > /tmp/obinit.log
-  testFileName=test-$RANDOM.file
+  test_composeConfig enabled layers-loop upper-persistent
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG" > /tmp/obinit.log
+
+  local testFileName=test-$RANDOM.file
   touch "$TEST_ROOTMNT_DIR/$testFileName"
  
   [ -f "$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/upper/$testFileName" ]
@@ -138,15 +146,16 @@ vgRun()
 
 @test "obinit should mount persistent upper under the tmpfs when the configuration says so" {
   
-  testFileName="${RANDOM}-$(date +%s).test"
-  persistentUpper="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/upper"
+  local testFileName="${RANDOM}-$(date +%s).test"
+  local persistentUpper="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/upper"
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
   mkdir "$persistentUpper"
   touch "$persistentUpper/$testFileName"
   tree $TEST_RAMFS_DIR
   umount -fl "$TEST_MNT_DIR"
 
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-upper.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs-include
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
   [ -f "$TEST_ROOTMNT_DIR/$testFileName" ]
   [ $vgExitCode -eq 0 ]
@@ -154,23 +163,25 @@ vgRun()
 
 @test "obinit should not mount persistent upper under the tmpfs when the configuration says so" {
   
-  testFileName="${RANDOM}-$(date +%s).test"
-  persistentUpper="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/upper"
+  local testFileName="${RANDOM}-$(date +%s).test"
+  local persistentUpper="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/upper"
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
   mkdir "$persistentUpper"
   touch "$persistentUpper/$testFileName"
   umount -fl "$TEST_MNT_DIR"
 
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
   [ ! -f "$TEST_ROOTMNT_DIR/$testFileName" ]
   [ $vgExitCode -eq 0 ]
 }
 
 @test "obinit should bind ramfs overboot directory into rootmnt" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
  
-  testFileName=test-$RANDOM.file
+  local testFileName=test-$RANDOM.file
   touch "$TEST_ROOTMNT_DIR/$testFileName"
  
   [ -d "$TEST_ROOTMNT_BINDINGS_DIR/lower-root" ]
@@ -181,7 +192,8 @@ vgRun()
 }
 
 @test "obinit should bind layer repository if the configuration says so" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
   [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers" ]
   [ -f "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_LAYER_1_NAME/root/etc/layer.yaml" ]
@@ -190,9 +202,10 @@ vgRun()
 
 
 @test "obinit should bind durable directories and overlay the origin if the configuration says so" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs durables-all
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
-  testFileName="${RANDOM}-$(date +%s).test"
+  local testFileName="${RANDOM}-$(date +%s).test"
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName"
   
   [ ! -f "$TEST_ROOTMNT_DIR/$TEST_DURABLES_DIR_1/orig.txt" ]
@@ -201,9 +214,10 @@ vgRun()
 }
 
 @test "obinit should bind durable directories and copy the original directory if the configuration says so" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs durables-all
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
-  testFileName="${RANDOM}-$(date +%s).test"
+  local testFileName="${RANDOM}-$(date +%s).test"
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2/$testFileName"
   
   [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_2/$testFileName" ]
@@ -213,16 +227,17 @@ vgRun()
 }
 
 @test "obinit should bind durable directories and skip copying origin if the persistent directory already exists" {
-  testFileName="${RANDOM}-$(date +%s).test"
+  local testFileName="${RANDOM}-$(date +%s).test"
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
-  mountedDurableDir="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/durables/$TEST_DURABLE_DIR_2"
+  local mountedDurableDir="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/durables/$TEST_DURABLE_DIR_2"
   mkdir -p "$mountedDurableDir"
   touch "$mountedDurableDir/$testFileName"
 
   umount -fl "$TEST_MNT_DIR"
   
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs durables-all
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
   
   [ ! -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_2/orig.txt" ]
   [ ! -f "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2/orig.txt" ]
@@ -231,11 +246,12 @@ vgRun()
 }
 
 @test "obinit should bind durable file" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs durables-all
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
-  persistentFile="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_1"
-  bindedFile="$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_1"
-  testValue=${RANDOM}-$(date +%s)
+  local persistentFile="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_1"
+  local bindedFile="$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_1"
+  local testValue=${RANDOM}-$(date +%s)
   
   echo -n $testValue > "$bindedFile"  
   cmp "$persistentFile" "$bindedFile"
@@ -243,9 +259,10 @@ vgRun()
 }
 
 @test "obinit should bind durable file and copy the original file if the configuration says so and the persistent file is not present" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs durables-all
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
   
-  copiedFile="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_2"
+  local copiedFile="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_2"
 
   [ -f "$copiedFile" ]
   [[ "$(cat "$copiedFile")" == "$TEST_DURABLE_VALUE" ]]
@@ -253,17 +270,18 @@ vgRun()
 }
 
 @test "obinit should bind durable file and skip copying the original file if the persistent one is present" {
-  testValue=${RANDOM}-$(date +%s)
+  local testValue=${RANDOM}-$(date +%s)
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
-  newDurableFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/durables/$TEST_DURABLE_FILE_2"
+  local newDurableFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/durables/$TEST_DURABLE_FILE_2"
   mkdir -p "$(dirname "$newDurableFile")"
   echo $testValue > "$newDurableFile"
 
   umount -fl "$TEST_MNT_DIR"
   
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs durables-all
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
-  persistentFile="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_2"
+  local persistentFile="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_2"
 
   [ -f "$persistentFile" ]
   [[ "$(cat "$persistentFile")" == "$testValue" ]]
@@ -271,11 +289,12 @@ vgRun()
 }
 
 @test "obinit should create and bind an empty durable directory if there is no original file or directory and the default type is directory or is undefined" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs durables-all
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
   
-  createdDurable="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_NO_ORIGIN"
+  local createdDurable="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_NO_ORIGIN"
 
-  testFileName="${RANDOM}-$(date +%s).test"
+  local testFileName="${RANDOM}-$(date +%s).test"
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_NO_ORIGIN/$testFileName"
   
   [ -d "$createdDurable" ]
@@ -284,9 +303,10 @@ vgRun()
 }
 
 @test "obinit should create and bind empty durable file if there is no original file or directory and the default type is file" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs durables-all
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
   
-  createdDurable="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_NO_ORIGIN"
+  local createdDurable="$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_FILE_NO_ORIGIN"
 
   echo $RANDOM >> "$TEST_ROOTMNT_DIR/$TEST_DURABLE_FILE_NO_ORIGIN"
 
@@ -296,10 +316,11 @@ vgRun()
 }
 
 @test "obinit should update fstab" {
-  ESCAPED_ROOTMNT_DIR=$(sed 's/[&/\]/\\&/g' <<<"$TEST_ROOTMNT_DIR")
+  local ESCAPED_ROOTMNT_DIR=$(sed 's/[&/\]/\\&/g' <<<"$TEST_ROOTMNT_DIR")
   sed -i "s/%rootmnt%/$ESCAPED_ROOTMNT_DIR/g" "$TEST_RAMFS_DIR/etc/mtab"
 
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
   echo -e "\n\nmtab:"
   cat "$TEST_RAMFS_DIR/etc/mtab"
@@ -313,16 +334,17 @@ vgRun()
 }
 
 @test "obinit should mount all the layers required by the head layer" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
   
-  layersDir="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers"
-  expectedValue1=$(cat "$layersDir/$TEST_LAYER_1_NAME/root/test/file1")
-  expectedValue2=$(cat "$layersDir/$TEST_LAYER_2_NAME/root/test/file2")
-  expectedValue3=$(cat "$layersDir/$TEST_LAYER_3_NAME/root/test/file3")
+  local layersDir="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers"
+  local expectedValue1=$(cat "$layersDir/$TEST_LAYER_1_NAME/root/test/file1")
+  local expectedValue2=$(cat "$layersDir/$TEST_LAYER_2_NAME/root/test/file2")
+  local expectedValue3=$(cat "$layersDir/$TEST_LAYER_3_NAME/root/test/file3")
   
-  value1=$(cat "$TEST_ROOTMNT_DIR/test/file1") 
-  value2=$(cat "$TEST_ROOTMNT_DIR/test/file2") 
-  value3=$(cat "$TEST_ROOTMNT_DIR/test/file3") 
+  local value1=$(cat "$TEST_ROOTMNT_DIR/test/file1") 
+  local value2=$(cat "$TEST_ROOTMNT_DIR/test/file2") 
+  local value3=$(cat "$TEST_ROOTMNT_DIR/test/file3") 
 
   [[ "$value1" == "$expectedValue1" ]]
   [[ "$value2" == "$expectedValue2" ]]
@@ -331,29 +353,31 @@ vgRun()
 }
 
 @test "obinit should assume 'root' head layer if not configured" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-nohead.yaml"
+  test_composeConfig enabled layers-nohead upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
   [ ! -f "$TEST_ROOTMNT_DIR/test/file1" ]
-  [ -f "$TEST_OB_CONFIG_PATH" ]
   [ $vgExitCode -eq 0 ]
 }
 
 @test "obinit should not mount root if the bottom layer's underlayer is 'none'" {
   # alt-root.obld uses 'none' underlayer
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-tmpfs-altroot.yaml"
+  test_composeConfig enabled layers-alt-root upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
-  [ ! -f "$TEST_OB_CONFIG_PATH" ]
+  [ ! -f "$TEST_ROOTMNT_DIR/etc/mtab" ]
   [ $vgExitCode -eq 0 ]
 }
 
 
 @test "obinit should use config_dir field and read all config files inside given directory" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-include.yaml"
+  test_composeConfig enabled config-dir layers-loop upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
-  testFileName1="${RANDOM}-$(date +%s).test"
+  local testFileName1="${RANDOM}-$(date +%s).test"
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName1"
   
-  testFileName2="${RANDOM}-$(date +%s).test"
+  local testFileName2="${RANDOM}-$(date +%s).test"
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_2/$testFileName2"
   
   [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_1/$testFileName1" ]
@@ -362,16 +386,18 @@ vgRun()
 }
 
 @test "obinit should use rootmnt subdirectory as a device if the configuration doesn't point to a file or a device" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
+  test_composeConfig enabled layers-dir upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
   [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
   [ $vgExitCode -eq 0 ]
 }
 
 @test "obinit should block write access to the embedded repository directory via mounted overlayfs" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
+  test_composeConfig enabled layers-dir upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
-  testFileName="${RANDOM}-$(date +%s).test"
-  canTouchThis=1
+  local testFileName="${RANDOM}-$(date +%s).test"
+  local canTouchThis=1
   touch "$TEST_INNER_DEV_DIR/$testFileName" 2>/dev/null || canTouchThis=0
 
   [ -d "$TEST_INNER_DEV_DIR" ]
@@ -380,16 +406,18 @@ vgRun()
 }
 
 @test "obinit should fail if the embedded repository is used without tmpfs upper layer" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-persistent.yaml"
+  test_composeConfig enabled layers-dir upper-persistent
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
   [ $vgExitCode -eq 1 ]
   [ ! -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
 }
 
 @test "obinit should allow write access to the embedded repository directory via durables" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
+  test_composeConfig enabled layers-dir upper-tmpfs durables-all
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
-  testFileName="${RANDOM}-$(date +%s).test"
+  local testFileName="${RANDOM}-$(date +%s).test"
   touch "$TEST_ROOTMNT_DIR/$TEST_DURABLE_DIR_1/$testFileName"
   
   [ -f "$TEST_DURABLES_STORAGE_DIR/$TEST_DURABLE_DIR_1/$testFileName" ]
@@ -397,27 +425,30 @@ vgRun()
 }
 
 @test "obinit should use embedded image as a device if the configuration points to an image file inside rootmnt (tmpfs)" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-img-tmpfs.yaml"
+  test_composeConfig enabled layers-img upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
   [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
   [ $vgExitCode -eq 0 ]
 }
 
 @test "obinit should use embedded image as a device if the configuration points to an image file inside rootmnt (persistent)" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-embedded-img-persistent.yaml"
+  test_composeConfig enabled layers-img upper-persistent
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
   [ -d "$TEST_ROOTMNT_BINDINGS_DIR/layers/$TEST_INNER_LAYER_NAME" ]
   [ $vgExitCode -eq 0 ]
 }
 
 @test "obinit should restore original rootmnt after rollback" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-rollback.yaml"
+  test_composeConfig enabled layers-loop upper-tmpfs rollback
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
   [ -f "$TEST_ROOTMNT_DIR/etc/fstab" ]
 
   umount -fl "$TEST_ROOTMNT_DIR"
 
-  tmpInMount=1
+  local tmpInMount=1
   mount | grep -q "$TEST_TMP_DIR" || tmpInMount=0
 
   [ $vgExitCode -ne 0 ]
@@ -427,7 +458,8 @@ vgRun()
 }
 
 @test "obinit should rollback when the layer chain is broken" {
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-wrong-head.yaml"
+  test_composeConfig enabled layers-wrong-head upper-tmpfs
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
    
   [ $vgExitCode -ne 0 ]
   [ ! -d "$TEST_OB_OVERLAY_DIR" ]
@@ -440,22 +472,25 @@ vgRun()
 @test "obinit should update the configuration file on update-config job" {
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
-  oldConfig="$TEST_TMP_DIR/overboot.yaml"
-  newConfig="$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
-  jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/update-config"
+  local newConfig="$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
+  test_composeConfig enabled layers-dir upper-tmpfs
+  cp "$TEST_COMPOSED_CONFIG" "$newConfig"
 
-  cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$oldConfig"
+  test_composeConfig enabled layers-loop upper-tmpfs
+  local oldConfig="$TEST_COMPOSED_CONFIG"
+  local jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/update-config"
+
   cp "$newConfig" "$jobFile"
 
-  oldConfigSum=$(md5sum "$oldConfig" | awk '{print $1}')
-  newConfigSum=$(md5sum "$newConfig" | awk '{print $1}')
+  local oldConfigSum=$(md5sum "$oldConfig" | awk '{print $1}')
+  local newConfigSum=$(md5sum "$newConfig" | awk '{print $1}')
 
   [[ $oldConfigSum != $newConfigSum ]]
 
   umount -lf "$TEST_MNT_DIR"
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$oldConfig"
    
-  oldConfigSum=$(md5sum "$oldConfig" | awk '{print $1}')
+  local oldConfigSum=$(md5sum "$oldConfig" | awk '{print $1}')
 
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
   [[ $oldConfigSum == $newConfigSum ]]
@@ -466,11 +501,14 @@ vgRun()
 @test "obinit should load and apply the new configuration after the update-config job is finished" {
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
-  oldConfig="$TEST_TMP_DIR/overboot.yaml"
-  newConfig="$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
-  jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/update-config"
+  local newConfig="$TEST_CONFIGS_DIR/overboot-embedded-tmpfs.yaml"
+  test_composeConfig enabled layers-dir upper-tmpfs
+  cp "$TEST_COMPOSED_CONFIG" "$newConfig"
 
-  cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$oldConfig"
+  test_composeConfig enabled layers-loop upper-tmpfs
+  local oldConfig="$TEST_COMPOSED_CONFIG"
+  local jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/update-config"
+
   cp "$newConfig" "$jobFile"
 
   umount -lf "$TEST_MNT_DIR"
@@ -486,24 +524,22 @@ vgRun()
 @test "obinit should copy new partial configuration file to config directory on install-config job" {
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
-  configDir="$TEST_ROOTMNT_DIR/etc/test-overboot.d"
+  local configDir="$TEST_ROOTMNT_DIR/etc/test-overboot.d"
 
-  configName="my-config-${RANDOM}.yaml"
-  newConfig="$TEST_TMP_DIR/$configName"
+  local configName="my-config-${RANDOM}.yaml"
+  local newConfig="$TEST_TMP_DIR/$configName"
   echo ${RANDOM} > "$newConfig"
-  newConfigSum=$(md5sum "$newConfig" | awk '{print $1}')
-  jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/install-config-$configName"
-
-  mount -o remount,rw "$TEST_ROOTMNT_DIR"
-  cp "$TEST_CONFIGS_DIR/overboot-tmpfs.yaml" "$TEST_ROOTMNT_DIR/etc/overboot.yaml"
-  mount -o remount,ro "$TEST_ROOTMNT_DIR"
+  local newConfigSum=$(md5sum "$newConfig" | awk '{print $1}')
+  local jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/install-config-$configName"
 
   cp "$newConfig" "$jobFile"
   
   umount -lf "$TEST_MNT_DIR"
+
+  test_composeConfig enabled config-dir layers-loop upper-tmpfs
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_ROOTMNT_DIR/etc/overboot.yaml"
    
-  installedConfig="$configDir/$configName"
+  local installedConfig="$configDir/$configName"
 
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
@@ -516,22 +552,23 @@ vgRun()
 @test "obinit should create a new layer from the upper layer on commit job" {
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
-  testFileName=test-$RANDOM.file
-  upperTestFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/upper/$testFileName"
+  local testFileName=test-$RANDOM.file
+  local upperTestFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/upper/$testFileName"
   mkdir -p $(dirname "$upperTestFile") ||:
-  testValue=$RANDOM
+  local testValue=$RANDOM
   echo $testValue > "$upperTestFile"
   
-  jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/commit"
-  layerName="new-layer-$RANDOM"
+  local jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/commit"
+  local layerName="new-layer-$RANDOM"
   echo "name: $layerName" > "$jobFile"
-  jobFileSum=$(md5sum "$jobFile" | awk '{print $1}')
+  local jobFileSum=$(md5sum "$jobFile" | awk '{print $1}')
 
   umount -lf "$TEST_MNT_DIR"
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml"
+  test_composeConfig enabled layers-loop upper-persistent
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
-  newLayer="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers/${layerName}.obld"
-  layerMetaFileSum=$(md5sum "$newLayer/root/etc/layer.yaml" | awk '{print $1}')
+  local newLayer="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers/${layerName}.obld"
+  local layerMetaFileSum=$(md5sum "$newLayer/root/etc/layer.yaml" | awk '{print $1}')
 
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
   [ -d "$newLayer" ]
@@ -545,25 +582,24 @@ vgRun()
 @test "obinit should move whiteout files on commit job" {
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
 
-  whiteoutFileName=whiteout_test_$RANDOM
-  upperWhiteoutFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/upper/$whiteoutFileName"
+  local whiteoutFileName=whiteout_test_$RANDOM
+  local upperWhiteoutFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/upper/$whiteoutFileName"
   mkdir -p $(dirname "$upperWhiteoutFile") ||:
   mknod "$upperWhiteoutFile" c 0 0
   
-  jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/commit"
-  layerName="new-layer-$RANDOM"
+  local jobFile="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_JOBS_DIR_NAME/commit"
+  local layerName="new-layer-$RANDOM"
   echo "name: $layerName" > "$jobFile"
-  jobFileSum=$(md5sum "$jobFile" | awk '{print $1}')
+  local jobFileSum=$(md5sum "$jobFile" | awk '{print $1}')
 
   umount -lf "$TEST_MNT_DIR"
-  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_CONFIGS_DIR/overboot-persistent.yaml"
+  test_composeConfig enabled layers-loop upper-persistent
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
 
-  newLayer="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers/${layerName}.obld"
-  layerMetaFileSum=$(md5sum "$newLayer/root/etc/layer.yaml" | awk '{print $1}')
+  local newLayer="$TEST_OB_DEVICE_MNT_PATH/$TEST_OB_REPOSITORY_NAME/layers/${layerName}.obld"
+  local layerMetaFileSum=$(md5sum "$newLayer/root/etc/layer.yaml" | awk '{print $1}')
 
   mount -o loop "$TEST_OB_DEVICE_PATH" "$TEST_MNT_DIR"
-
-tree $TEST_TMP_DIR
 
   [ -d "$newLayer" ]
   [ ! -c "$upperWhiteoutFile" ]
@@ -572,4 +608,3 @@ tree $TEST_TMP_DIR
   [ $vgExitCode -eq 0 ]
 }
 
-# TODO: make new layer from root?

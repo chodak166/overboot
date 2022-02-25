@@ -1,0 +1,4 @@
+layers:
+  visible: true
+  device: "/dev/ob_test_device"
+  repository: "overboot"
