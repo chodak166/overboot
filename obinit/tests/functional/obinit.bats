@@ -467,6 +467,106 @@ vgRun()
 
 # --- safe mode ---
 
+@test "obinit should start when the safe mode is on and there is no lock file in the repository" {
+  test_composeConfig enabled layers-loop upper-tmpfs safe-mode
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
+   
+  [ $vgExitCode -eq 0 ]
+  [ -d "$TEST_OB_OVERLAY_DIR" ]
+}
+
+@test "obinit should not start when the safe mode is on and the lock file contains current config's xxHash" {
+  test_composeConfig enabled layers-loop upper-tmpfs safe-mode
+  local hash=$(xxh64sum "$TEST_COMPOSED_CONFIG" | awk '{print $1}')
+  echo "xxHash: $hash"
+
+  mount $TEST_LOOP_DEVICE_LINK "$TEST_MNT_DIR"
+  echo $hash > "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_OB_LOCK_NAME"
+  umount -fl "$TEST_MNT_DIR"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
+   
+  [ $vgExitCode -ne 0 ]
+  [ ! -d "$TEST_OB_OVERLAY_DIR" ]
+}
+
+@test "obinit should not not delete the lock file when it contains current config's xxHash" {
+  test_composeConfig enabled layers-loop upper-tmpfs safe-mode
+  local hash=$(xxh64sum "$TEST_COMPOSED_CONFIG" | awk '{print $1}')
+  echo "xxHash: $hash"
+
+  local lockPath="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_OB_LOCK_NAME"
+
+  mount $TEST_LOOP_DEVICE_LINK "$TEST_MNT_DIR"
+  echo $hash > "$lockPath"
+  umount -fl "$TEST_MNT_DIR"
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
+   
+  local lockExists=false
+  mount $TEST_LOOP_DEVICE_LINK "$TEST_MNT_DIR"
+  [ ! -f "$lockPath" ] || lockExists=true
+  umount -fl "$TEST_MNT_DIR"
+
+  [ $lockExists = true ]
+}
+
+@test "obinit should start when the safe mode is on and the lock file does not contain current config's xxHash" {
+  mount $TEST_LOOP_DEVICE_LINK "$TEST_MNT_DIR"
+  echo 'wrongxxhash' > "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_OB_LOCK_NAME"
+  umount -fl "$TEST_MNT_DIR"
+  
+  test_composeConfig enabled layers-loop upper-tmpfs safe-mode
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
+   
+  [ $vgExitCode -eq 0 ]
+  [ -d "$TEST_OB_OVERLAY_DIR" ]
+}
+
+@test "obinit should delete the lock file when it does not contain current config's xxHash" {
+  local lockPath="$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_OB_LOCK_NAME"
+  mount $TEST_LOOP_DEVICE_LINK "$TEST_MNT_DIR"
+  echo 'wrongxxhash' > "$lockPath"
+  umount -fl "$TEST_MNT_DIR"
+
+  test_composeConfig enabled layers-loop upper-tmpfs safe-mode
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
+   
+  local lockExists=true
+  mount $TEST_LOOP_DEVICE_LINK "$TEST_MNT_DIR"
+  [ -f "$lockPath" ] || lockExists=false
+  umount -fl "$TEST_MNT_DIR"
+
+  [ $vgExitCode -eq 0 ]
+  [ $lockExists = false ]
+}
+
+@test "obinit should create the lock file after fail" {
+  test_composeConfig enabled layers-wrong-head upper-tmpfs safe-mode
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
+   
+  local lockExists=false
+  mount $TEST_LOOP_DEVICE_LINK "$TEST_MNT_DIR"
+  [ ! -f "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_OB_LOCK_NAME" ] || lockExists=true
+  umount -fl "$TEST_MNT_DIR"
+
+  [ $lockExists = true ]
+}
+
+@test "The lock file created after fail should contain current config's xxHash" {
+  test_composeConfig enabled layers-wrong-head upper-tmpfs safe-mode
+
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
+
+  local expectedHash=$(xxh64sum "$TEST_COMPOSED_CONFIG" | awk '{print $1}')
+  mount $TEST_LOOP_DEVICE_LINK "$TEST_MNT_DIR"
+  local lockHash=$(cat "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_OB_LOCK_NAME")
+  umount -fl "$TEST_MNT_DIR"
+
+  #echo "Matching $lockHash against $expectedHash"
+
+  [ $vgExitCode -ne 0 ]
+  [[ "$lockHash" == "$expectedHash" ]]
+}
+
 # --- jobs ---
 
 @test "obinit should update the configuration file on update-config job" {

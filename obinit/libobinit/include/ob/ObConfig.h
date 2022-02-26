@@ -35,6 +35,7 @@ typedef struct ObConfig
   bool clearUpper;
   bool rollback;
   bool upperAsLower;
+  bool safeMode;
   ObDurable* durable;
 
 } ObConfig;

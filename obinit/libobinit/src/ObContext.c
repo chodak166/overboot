@@ -41,6 +41,7 @@ void obInitializeObContext(ObContext* context, const char* prefix)
   config->clearUpper = false;
   config->rollback = false;
   config->upperAsLower = false;
+  config->safeMode = false;
 
   config->durable = NULL;
 
@@ -141,12 +142,14 @@ void obLogObContext(const ObContext* context)
 {
   const ObConfig* config = &context->config;
   obLogI("enabled: %i", config->enabled);
+  obLogI("safe mode: %i", config->safeMode);
   obLogI("use tmpfs: %i", config->useTmpfs);
   obLogI("tmpfs size: %s", config->tmpfsSize);
   obLogI("bind layers: %i", config->bindLayers);
   obLogI("Device path: %s", config->devicePath);
   obLogI("head layer: %s", config->headLayer);
   obLogI("repository: %s", config->repository);
+  obLogI("include upper: %i", config->upperAsLower);
   obLogI("config dir: %s", config->configDir);
 
   int durablesCount = obCountDurables(config);

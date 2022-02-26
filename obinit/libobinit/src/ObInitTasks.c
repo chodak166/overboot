@@ -27,6 +27,11 @@ static ObTaskListPtr createObInitTaskList(ObContext* context)
                       context);
   obAppendTask(tasks, task);
 
+  task = obCreateTask((ObTaskFunction)obInitLock,
+                      NULL,
+                      context);
+  obAppendTask(tasks, task);
+
   task = obCreateTask((ObTaskFunction)obExecPreInitJobs,
                       NULL,
                       context);
@@ -65,6 +70,12 @@ static ObTaskListPtr createObInitTaskList(ObContext* context)
   task = obCreateTask((ObTaskFunction)checkRollback,
                       NULL,
                       context);
+  obAppendTask(tasks, task);
+
+  task = obCreateTask((ObTaskFunction)obUnsetLock,
+                      NULL,
+                      context);
+
   obAppendTask(tasks, task);
 
   return tasks;

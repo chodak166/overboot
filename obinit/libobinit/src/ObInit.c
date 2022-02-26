@@ -5,6 +5,7 @@
 
 #include "ob/ObInit.h"
 #include "ob/ObLogging.h"
+#include "ob/ObHash.h"
 #include "ObMount.h"
 #include "ObOsUtils.h"
 #include "ObFstab.h"
@@ -439,3 +440,41 @@ bool obInitDurables(ObContext* context)
   return result;
 }
 
+
+bool obInitLock(ObContext* context)
+{
+  if (!context->config.safeMode) {
+    return true;
+  }
+
+  uint64_t currentConfigHash = obCalcualateFileHash(context->config.configPath);
+
+  sds lockPath = obGetLockFilePath(context);
+  if (obExists(lockPath)) {
+    obLogW("Lock file found in %s", lockPath);
+    uint64_t oldConfigHash = obReadHashValue(lockPath);
+    obLogI("Comparing old config (%" PRIx64 ") with current config (%" PRIx64 ")",
+           oldConfigHash, currentConfigHash);
+    if (oldConfigHash == currentConfigHash) {
+      obLogW("Locked config hasn't changed, aborting due to enabled safe mode");
+      sdsfree(lockPath);
+      return false;
+    }
+  }
+
+  bool result = obWriteAsHexStr(currentConfigHash, lockPath);
+  sdsfree(lockPath);
+  return result;
+}
+
+bool obUnsetLock(ObContext* context)
+{
+  sds lockPath = obGetLockFilePath(context);
+  bool result = true;
+  if (obExists(lockPath) && !obRemovePath(lockPath)) {
+    obLogE("Cannot remove lock file: %s", lockPath);
+    result = false;
+  }
+  sdsfree(lockPath);
+  return result;
+}

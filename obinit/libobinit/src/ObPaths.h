@@ -36,5 +36,6 @@ sds obGetRootFstabPath(const char* rootmnt);
 
 sds obGetRootFstabBackupPath(const char* fstabPath);
 
+sds obGetLockFilePath(const ObContext* context);
 
 #endif // OBPATHS_H

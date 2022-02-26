@@ -23,8 +23,10 @@ add_library(${TARGET} STATIC
   src/ObPaths.c
   src/ObBlkid.c
   src/ObJobs.c
+  src/ObXxHash.c
 
   extern/sds/sds.c
+  extern/xxHash/xxhash.c
   )
 
 target_include_directories(${TARGET}
@@ -34,11 +36,15 @@ target_include_directories(${TARGET}
   PRIVATE
   src
   ${CMAKE_CURRENT_LIST_DIR}/extern/sds
+  ${CMAKE_CURRENT_LIST_DIR}/extern/xxHash
   )
 
 target_compile_definitions(${TARGET}
   PRIVATE
   -D_GNU_SOURCE
+
+  #TODO: make xxHash optional?
+  -DXXH_INLINE_ALL
   )
 
 target_link_libraries(${TARGET} PUBLIC yaml.a

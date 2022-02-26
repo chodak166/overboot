@@ -104,4 +104,8 @@ sds obGetRootFstabBackupPath(const char* fstabPath)
   return sdscat(backupPath, ".orig");
 }
 
-
+sds obGetLockFilePath(const ObContext* context)
+{
+  sds path = obGetRepoPath(context);
+  return sdscat(path, "/obinit.lock");
+}

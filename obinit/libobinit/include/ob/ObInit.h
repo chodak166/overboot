@@ -22,5 +22,10 @@ bool obInitFstab(ObContext* context);
 
 bool obInitDurables(ObContext* context);
 
+bool obInitLock(ObContext* context);
+
+bool obUnsetLock(ObContext* context);
+
+
 
 #endif // OBINIT_H
