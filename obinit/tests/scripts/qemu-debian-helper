@@ -47,7 +47,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 set -e          # exit on command errors (so you MUST handle exit codes properly!)
 set -o pipefail # capture fail exit codes in piped commands
-#set -x          # execution tracing debug messages
+set -x          # execution tracing debug messages
 
 suite=
 image=
@@ -225,11 +225,12 @@ function createImageFile
   chrootExec "${mntDir}" grub-mkconfig -o /boot/grub/grub.cfg
   chrootExec "${mntDir}" apt clean
 
+  mkdir /data ||:
   echo "/dev/sdb /data ext4 rw,user,exec 0 0" >> "${mntDir}/etc/fstab"
   echo -e "#!/bin/sh\n\n/usr/bin/run-parts /data/tasks" > "${mntDir}/etc/rc.local"
   chmod +x "${mntDir}/etc/rc.local"
   
-  umount "${mntDir}"
+  umount -fl "${mntDir}"
   losetup -d $loDevice
   rmdir "${mntDir}"
   rmdir "${bootstrapDir}"
@@ -268,10 +269,10 @@ function chrootExec
   chroot "${mntDir}" /bin/bash -c "HOME=/root LC_ALL=C LANG=C.UTF-8 TERM=xterm-256color $cmd"
   sync
 
-  umount "${mntDir}/proc"
-  umount "${mntDir}/sys"
-  umount "${mntDir}/dev/pts"
-  umount "${mntDir}/dev"
+  umount -lf "${mntDir}/dev/pts"
+  umount -lf "${mntDir}/proc"
+  umount -lf "${mntDir}/sys"
+  umount -lf "${mntDir}/dev"
 }
 
 function runImage

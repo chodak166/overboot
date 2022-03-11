@@ -3,6 +3,7 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 set -e
+set -x
 
 DEBIAN_SUITE=buster
 DOCKER_BUILD_IMAGE=chodak166/dev-cpp:buster-1.2
@@ -10,14 +11,17 @@ OBINIT_DIR="$SCRIPT_DIR/../.."
 
 OBINIT_BUILD_DIR="$OBINIT_DIR/build/$DEBIAN_SUITE"
 OBINIT_BIN="$OBINIT_BUILD_DIR/bin/obinit"
-OBINIT_IRFS_SCRIPT="$OBINIT_DIR/aps/obinit/system/usr/share/initramfs-tools/scripts/local-bottom/obinit"
-OBINIT_CONFIG="$OBINIT_DIR/tests/configs/overboot-tmpfs-sdb.yaml"
+OBINIT_IRFS_SCRIPT="$OBINIT_DIR/apps/obinit/system/usr/share/initramfs-tools/scripts/local-bottom/obinit"
+OBINIT_CONFIG_DIR="$OBINIT_DIR/tests/configs"
 QEMU_DEBIAN_HELPER="$SCRIPT_DIR/qemu-debian-helper"
 
+MNT_DIR="$SCRIPT_DIR/mnt.$(date +%s)"
 VM_DIR="$SCRIPT_DIR/sysroot-$DEBIAN_SUITE"
 
 main()
 {
+  trap finish EXIT
+
   assertCommands
   createBaseImg
   buildObinit
@@ -26,6 +30,17 @@ main()
   initObRepository
 
   runVm
+}
+
+finish()
+{
+  MAX_NESTED_MOUNTS=10
+  for u in $(seq $MAX_NESTED_MOUNTS); do
+    for i in $(awk "\$2 ~ \"^$MNT_DIR\" { print \$2 }" /proc/mounts); do
+      umount -fl "$i" 2>/dev/null || :
+    done
+  done
+  umount -fl $MNT_DIR 2>/dev/null || :
 }
 
 assertCommands()
@@ -72,13 +87,12 @@ EOC
 
 installObinit()
 {
-  mntDir="$SCRIPT_DIR/mnt.$(date +%s)"
-  mkdir "$mntDir"
+  mkdir "$MNT_DIR"
   echo -n "Mounting qcow2 drive... "
-  guestmount -a "$VM_DIR/sysroot-${DEBIAN_SUITE}-overlay.qcow2" -m /dev/sda1 "$mntDir"
+  guestmount -a "$VM_DIR/sysroot-${DEBIAN_SUITE}-overlay.qcow2" -m /dev/sda1 "$MNT_DIR"
   echo "done"
 
-  mntIrfsScript="$mntDir/usr/share/initramfs-tools/scripts/local-bottom/obinit"
+  mntIrfsScript="$MNT_DIR/usr/share/initramfs-tools/scripts/local-bottom/obinit"
   if [ ! -f "$mntIrfsScript" ]; then
     echo "initramfs obinit script not found, installing and updating initramfs..."
     [ -d "$(dirname $mntIrfsScript)" ] || mkdir -p "$(dirname $mntIrfsScript)"
@@ -86,17 +100,22 @@ installObinit()
 
     grep -q overlay /etc/initramfs-tools/modules || echo overlay >> /etc/initramfs-tools/modules
     
-    chrootExec "${mntDir}" update-initramfs -u
+    chrootExec "${MNT_DIR}" update-initramfs -u
   fi
 
-  cp -v "$OBINIT_CONFIG" "$mntDir/etc/overboot.yaml"
-  cp -v "$OBINIT_BIN" "$mntDir/sbin/"
-  cp -v "$OBINIT_DIR/apps/obinit/system/usr/bin/obhelper" "$mntDir/usr/bin/obhelper"
-  chmod +x "$mntDir/usr/bin/obhelper"
+  cat "$OBINIT_CONFIG_DIR/overboot-enabled.yaml" \
+  "$OBINIT_CONFIG_DIR/overboot-layers-sdb.yaml" \
+  "$OBINIT_CONFIG_DIR/overboot-upper-tmpfs.yaml" \
+  "$OBINIT_CONFIG_DIR/overboot-durables-all.yaml" \
+   > "$MNT_DIR/etc/overboot.yaml"
+
+  cp -v "$OBINIT_BIN" "$MNT_DIR/sbin/"
+  cp -v "$OBINIT_DIR/apps/obinit/system/usr/bin/obhelper" "$MNT_DIR/usr/bin/obhelper"
+  chmod +x "$MNT_DIR/usr/bin/obhelper"
 
   echo -n "Unmounting qcow2 drive... "
-  umount -lf "$mntDir"
-  rmdir "$mntDir"
+  umount -lf "$MNT_DIR"
+  rmdir "$MNT_DIR"
   echo "done"
   sleep 1s
 }
@@ -133,10 +152,10 @@ chrootExec()
   chroot "${mntDir}" /bin/bash -c "HOME=/root LC_ALL=C LANG=C.UTF-8 TERM=xterm-256color $cmd"
   sync
 
-  umount "${mntDir}/proc"
-  umount "${mntDir}/sys"
-  umount "${mntDir}/dev/pts"
-  umount "${mntDir}/dev"
+  umount -lf "${mntDir}/proc"
+  umount -lf "${mntDir}/sys"
+  umount -lf "${mntDir}/dev/pts"
+  umount -lf "${mntDir}/dev"
 }
 
 runVm()

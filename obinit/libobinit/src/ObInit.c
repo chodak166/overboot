@@ -142,37 +142,6 @@ static bool obBindJobsDir(const ObContext* context, const char* bindedOverlay)
 
 bool obInitPersistentDevice(ObContext* context)
 {
-  //  ObConfig* config = &context->config;
-  //  if (!obFindDevice(context)) {
-  //    if (strlen(config->devicePath) && config->devicePath[0] != '/') {
-  //      obLogE("%s does not look like path nor valid UUID, aborting", config->devicePath);
-  //      return false;
-  //    }
-  //    obLogI("Device not found, using %s as a local repository ", config->devicePath);
-  //    obLogW("Using local repository requires RW mount of the lower layer");
-
-  //    sds localRepoDir = sdsnew(context->root);
-  //    localRepoDir = sdscat(localRepoDir, config->devicePath);
-  //    strcpy(config->devicePath, localRepoDir);
-  //    sdsfree(localRepoDir);
-
-  //    if (!config->useTmpfs) {
-  //      obLogE("Using repository from the same device as rootfs is not supported due to overlayfs limitations. Please use tmpfs as the upper layer.");
-  //      return false;
-  //    }
-
-  //    context->dirAsDevice = true;
-  //    obRemountRw(context->root, NULL);
-
-  //    bool result = obMountLocalRepository(config->devicePath, context->devMountPoint);
-  //    return result;
-  //  }
-
-  //  if (!obMountDevice(config->devicePath, context->devMountPoint)) {
-  //    obLogE("Device mount (%s -> %s) failed", config->devicePath, context->devMountPoint);
-  //    return false;
-  //  }
-
   ObConfig* config = &context->config;
   if (!obFindDevice(context)) {
     obLogE("Cannot find or identify device: %s", config->devicePath);

@@ -539,7 +539,7 @@ vgRun()
   [ $lockExists = false ]
 }
 
-@test "obinit should create the lock file after fail" {
+@test "obinit should create the lock file on external device after fail" {
   test_composeConfig enabled layers-wrong-head upper-tmpfs safe-mode
   vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
    
@@ -550,6 +550,19 @@ vgRun()
 
   [ $lockExists = true ]
 }
+
+@test "obinit should create the lock file inside embedded image after fail" {
+  test_composeConfig enabled layers-img upper-tmpfs safe-mode
+  vgRun $OBINIT_BIN -r "$TEST_RAMFS_DIR" -c "$TEST_COMPOSED_CONFIG"
+   
+  local lockExists=false
+  mount $TEST_EMBEDDED_IMG "$TEST_MNT_DIR"
+  [ ! -f "$TEST_MNT_DIR/$TEST_OB_REPOSITORY_NAME/$TEST_OB_LOCK_NAME" ] || lockExists=true
+  umount -fl "$TEST_MNT_DIR"
+
+  [ $lockExists = true ]
+}
+
 
 @test "The lock file created after fail should contain current config's xxHash" {
   test_composeConfig enabled layers-wrong-head upper-tmpfs safe-mode
