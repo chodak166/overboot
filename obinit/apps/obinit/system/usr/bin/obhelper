@@ -50,7 +50,7 @@
 
 SCRIPT_NAME=obhelper
 SCRIPT_FILENAME=$(basename "$0")
-SCRIPT_VERSION=0.1.2
+SCRIPT_VERSION=0.1.3
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 set -e          # exit on command errors (so you MUST handle exit codes properly!)
@@ -75,7 +75,7 @@ rootfs=/
 obRunning=false
 obActiveLayers=()
 
-MTAB_FILE=/etc/mtab
+MTAB_FILE=/proc/self/mounts
 OVERBOOT_DIR=/overboot
 JOBS_DIR=$OVERBOOT_DIR/jobs
 LAYERS_DIR=$OVERBOOT_DIR/layers
@@ -292,6 +292,8 @@ obStatusCmd()
 
   if [ $obRunning = true ]; then
     echo -e "${GREEN}RUNNING${NC}"
+    local upperPath="${rootfs}${OVERBOOT_DIR}/upper"
+    echo -e "\nUpper type: ${GREEN}$(obGetPathFsType "$upperPath")${NC}"
     obPrintActiveLayers
   else
     echo -e "${RED}NOT RUNNING${NC}"
@@ -621,6 +623,13 @@ obSwitchHeadCmd()
     echo "Wrong layer index"
   fi
 
+}
+
+obGetPathFsType()
+{
+  local path="$1"
+  local value=$(df -TP $path | tail -1 | awk '{print $2}')
+  echo $value
 }
 
 obHwPoweroffCmd()
