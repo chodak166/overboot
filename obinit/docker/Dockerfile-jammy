@@ -1,0 +1,25 @@
+# Build:
+# docker build -t ob-jammy -f Dockerfile-jammy .
+#
+# Run:
+# docker run --rm -v $PWD/../..:/usr/src/overboot -e OWNER=${UID} ob-jammy
+
+FROM chodak166/dh-cmake:jammy
+
+WORKDIR /usr/src
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt update && \
+  apt install -y \
+  libblkid-dev \
+  libyaml-dev
+
+VOLUME ["/usr/src/overboot"]
+
+ENV OWNER=1000
+ENV OUT_DIR=deb-jammy
+
+COPY entrypoint.sh /
+
+ENTRYPOINT [ "/entrypoint.sh" ]
