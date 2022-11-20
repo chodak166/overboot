@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 set(UNITY_DIR ../../extern/unity/src)
-set(LIBOBINIT_DIR ../../libobinit)
+set(LIBOBINIT_DIR ../../lib)
 
 include_directories(
     ${UNITY_DIR}

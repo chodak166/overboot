@@ -36,13 +36,13 @@ endif()
 
 install (
   PROGRAMS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}
-  DESTINATION /sbin/
+  DESTINATION /sbin/ COMPONENT bin
   )
 
 install (
   DIRECTORY
   system/
-  DESTINATION /
+  DESTINATION / COMPONENT bin
   )
 
 
