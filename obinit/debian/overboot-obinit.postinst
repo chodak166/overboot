@@ -1,0 +1,38 @@
+#!/bin/bash
+
+[ -d /etc/overboot.d ] || mkdir /etc/overboot.d
+[ -f /etc/overboot.yaml ] || cp /usr/share/overboot/overboot.default.yaml /etc/overboot.yaml
+
+chmod +x /usr/share/initramfs-tools/scripts/local-bottom/obinit
+chmod +x /usr/bin/obhelper
+
+initModules=/etc/initramfs-tools/modules
+grep -v '^\s*$\|^\s*\#' $initModules | grep -q loop || echo "loop" >> $initModules
+grep -v '^\s*$\|^\s*\#' $initModules | grep -q overlay || echo "overlay" >> $initModules
+
+if grep Hardware /proc/cpuinfo | grep -qi bcm; then
+  echo "Raspberry PI hardware detected"
+  piKernelFile=/etc/default/raspberrypi-kernel
+  cp -v ${piKernelFile} ${piKernelFile}.orig
+  sed -i '/#INITRD=/c\INITRD=Yes' ${piKernelFile}
+
+  updateConfigHook=/etc/initramfs-tools/hooks/update-configtxt
+
+  cat > $updateConfigHook << EOL
+#!/bin/bash
+
+echo "Updating /boot/config.txt"
+
+if grep -q 'initramfs ' /boot/config.txt; then
+  sed -i "s|^initramfs .*|initramfs initrd.img-\$(uname -r)|" /boot/config.txt
+else
+  echo -e "\ninitramfs initrd.img-\$(uname -r)" >> /boot/config.txt
+fi
+EOL
+  chmod +x $updateConfigHook
+  update-initramfs -c -k $(uname -r) ||:
+else
+  update-initramfs -u
+fi
+
+exit 0

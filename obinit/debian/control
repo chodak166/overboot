@@ -1,0 +1,13 @@
+Source: overboot-obinit
+Maintainer: chodak166 <chodak166@op.pl>
+Build-Depends: cmake, dh-cmake, dh-cmake-compat (= 1), dh-sequence-cmake, debhelper-compat (= 12), libyaml-dev (>= 0.1.7), libblkid-dev (>= 2.31.1)
+Standards-Version: 4.1.5
+Section: utils
+Priority: optional
+
+Package: overboot-obinit
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Overboot initramfs binary
+ This package contains Overboot obinit binary.
+
