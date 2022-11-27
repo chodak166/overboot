@@ -13,6 +13,8 @@
 
 #define OB_LOG_MAX 4096
 
+#define IGNORE_RETURN (void)!
+
 static struct {
   bool stdOut;
   bool kmsgOut;
@@ -41,7 +43,7 @@ static void obWriteKmsgLog(const char* log)
     obWriteStdLogE("problem opening /dev/kmsg\n");
     return;
   }
-  write(fd, log, strlen(log)+1);
+  IGNORE_RETURN write(fd, log, strlen(log)+1);
   close(fd);
 }
 

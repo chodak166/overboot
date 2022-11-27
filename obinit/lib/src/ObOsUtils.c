@@ -80,7 +80,11 @@ static int obSyncCb(const char* path, const struct stat* sbuf, int type, struct 
   }
   else if (type == FTW_SL) {
     char linkTarget[OB_PATH_MAX] = {0};
-    readlink(path, linkTarget, OB_PATH_MAX);
+
+    if (readlink(path, linkTarget, OB_PATH_MAX) == -1) {
+      obLogE("readlink error on %s: ", path, errno);
+      return 1;
+    }
     if (symlink(linkTarget, toPath) != 0) {
       obLogE("Cannot create symlink %s -> %s", path, linkTarget);
       return 1;
@@ -114,8 +118,15 @@ static bool obCopyFileAttributes(const char* src, const char* dst)
     return false;
   }
 
-  chmod(dst, st.st_mode);
-  chown(dst, st.st_uid, st.st_gid);
+  if (chmod(dst, st.st_mode) != 0) {
+    obLogW("chmod error on %s", dst);
+    return 1;
+  }
+
+  if (chown(dst, st.st_uid, st.st_gid) != 0) {
+    obLogW("chown error on %s", dst);
+    return 1;
+  }
 
   int fd = open(dst, O_WRONLY);
   if (fd == -1) {
