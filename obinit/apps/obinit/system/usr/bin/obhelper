@@ -241,7 +241,7 @@ promptUser()
   prompt="$2"
   default="$3"
   echo -ne "$prompt [$default]: "
-  read -e input
+  read input
   if [[ -z "$input" ]]; then
     input="$default"
   fi

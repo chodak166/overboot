@@ -3,7 +3,7 @@ overboot (0.1.6-1) jammy; urgency=medium
   * Minor obhelper (0.1.3) script improvements.
   * Updated the default configuration file content.
 
- -- Łukasz Chodyła <chodak166@op.pl>  Fri, 18 Nov 2021 15:00:00 +0100
+ -- Łukasz Chodyła <chodak166@op.pl>  Thu, 18 Nov 2021 15:00:00 +0100
 
 overboot (0.1.5-1) impish; urgency=medium
 

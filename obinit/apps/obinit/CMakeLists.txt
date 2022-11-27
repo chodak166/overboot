@@ -36,15 +36,20 @@ endif()
 
 install (
   PROGRAMS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}
-  DESTINATION /sbin/ COMPONENT bin
+  DESTINATION /sbin/ COMPONENT bin-obinit
   )
 
 install (
   DIRECTORY
   system/
-  DESTINATION / COMPONENT bin
+  DESTINATION / COMPONENT bin-obinit
   )
 
+install (
+  PROGRAMS
+  system/usr/share/initramfs-tools/scripts/local-bottom/obinit
+  DESTINATION /usr/share/initramfs-tools/scripts/local-bottom/ COMPONENT bin-obinit
+  )
 
 ################## PACKAGING #################
 

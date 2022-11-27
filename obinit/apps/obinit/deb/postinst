@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 [ -d /etc/overboot.d ] || mkdir /etc/overboot.d
 [ -f /etc/overboot.yaml ] || cp /usr/share/overboot/overboot.default.yaml /etc/overboot.yaml
 
