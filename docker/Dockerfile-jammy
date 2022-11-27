@@ -18,7 +18,7 @@ RUN apt update && \
 VOLUME ["/usr/src/overboot"]
 
 ENV OWNER=1000
-ENV OUT_DIR=deb-jammy
+ENV OUT_DIR=/usr/src/overboot/deb-jammy
 
 COPY entrypoint.sh /
 

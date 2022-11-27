@@ -11,8 +11,8 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Overboot initramfs binary
  This package contains Overboot obinit binary.
 
-Package: overboot-obctl
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Overboot managment tools
- This package contains Overboot obctl binary.
+# Package: overboot-obctl
+# Architecture: any
+# Depends: ${shlibs:Depends}, ${misc:Depends}
+# Description: Overboot managment tools
+#  This package contains Overboot obctl binary.
