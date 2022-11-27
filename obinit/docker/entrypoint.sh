@@ -17,9 +17,17 @@ makePackage()
   pushd $PROJECT_DIR
   mkdir -p ${OUT_DIR}/source 2>/dev/null ||: 
   dpkg-buildpackage -us -uc -ui -i -I --build=source
-  mv -v $PROJECT_DIR/../*.* ${OUT_DIR}/source
+    mv -v $PROJECT_DIR/../*.buildinfo \
+    $PROJECT_DIR/../*.changes \
+    $PROJECT_DIR/../*.tar.gz \
+    $PROJECT_DIR/../*.dsc \
+    ${OUT_DIR}/source/
   dpkg-buildpackage -us -uc -ui -i -I --build=binary
-  mv -v $PROJECT_DIR/../*.* ${OUT_DIR}/
+  mv -v $PROJECT_DIR/../*.buildinfo \
+    $PROJECT_DIR/../*.changes \
+    $PROJECT_DIR/../*.deb \
+    $PROJECT_DIR/../*.ddeb \
+    ${OUT_DIR}/
   chown -v -R ${OWNER}:${OWNER} ${OUT_DIR}
   popd
 }
