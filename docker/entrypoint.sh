@@ -4,30 +4,52 @@
 # OWNER - output package owner UID
 # OUT_DIR - package output directory name
 
-PROJECT_DIR=/usr/src/overboot/obinit
+PROJECT_NAME=overboot
+PROJECT_DIR=/usr/src/${PROJECT_NAME}
 
 main()
 {
-  makePackage
+  makeSourcePackage
+  makeBinaryPackage
   makeTests
 }
 
-makePackage()
+makeBinaryPackage()
 {
   pushd $PROJECT_DIR
-  mkdir -p ${OUT_DIR}/source 2>/dev/null ||: 
-  dpkg-buildpackage -us -uc -ui -i -I --build=source
-    mv -v $PROJECT_DIR/../*.buildinfo \
-    $PROJECT_DIR/../*.changes \
-    $PROJECT_DIR/../*.tar.gz \
-    $PROJECT_DIR/../*.dsc \
-    ${OUT_DIR}/source/
   dpkg-buildpackage -us -uc -ui -i -I --build=binary
+  
+  mkdir -p ${OUT_DIR} 2>/dev/null ||: 
   mv -v $PROJECT_DIR/../*.buildinfo \
     $PROJECT_DIR/../*.changes \
     $PROJECT_DIR/../*.deb \
     $PROJECT_DIR/../*.ddeb \
     ${OUT_DIR}/
+  chown -v -R ${OWNER}:${OWNER} ${OUT_DIR}
+  popd
+}
+
+makeSourcePackage()
+{
+  pushd $PROJECT_DIR
+  
+  # build orig tarball since dpkg-source will not do that
+  # for quilt format:
+  srcName=$(dpkg-parsechangelog -S Source)
+  srcVersion=$(dpkg-parsechangelog -S Version | cut -d '-' -f 1)
+  git config --global --add safe.directory $PWD
+  git ls-files -z | xargs -0 \
+    tar --transform "s/^/${srcName}\//" \
+    -czvf ../${srcName}_${srcVersion}.orig.tar.gz
+
+  dpkg-buildpackage -us -uc -ui -i=* -I --build=source
+  
+  mkdir -p ${OUT_DIR}/source 2>/dev/null ||: 
+  mv -v $PROJECT_DIR/../*.buildinfo \
+  $PROJECT_DIR/../*.changes \
+  $PROJECT_DIR/../*.tar.gz \
+  $PROJECT_DIR/../*.dsc \
+  ${OUT_DIR}/source/
   chown -v -R ${OWNER}:${OWNER} ${OUT_DIR}
   popd
 }
@@ -42,9 +64,10 @@ makeTests()
     ..
   cmake --build . -- -j4
   #TODO: use ctest, try running bats
-  cd bin
-  ./ObSyncTest
-  ./TaskListTest
+  bin/ObSyncTest
+  bin/TaskListTest
+  cd ..
+  rm -r $dir
   popd
 }
 

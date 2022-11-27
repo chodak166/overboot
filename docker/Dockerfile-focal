@@ -2,7 +2,7 @@
 # docker build -t ob-focal -f Dockerfile-focal .
 #
 # Run:
-# docker run --rm -v $PWD/../..:/usr/src/overboot -e OWNER=${UID} ob-focal
+# docker run --rm -v $PWD/../:/usr/src/overboot -e OWNER=${UID} ob-focal
 
 FROM chodak166/dh-cmake:focal
 
