@@ -27,6 +27,4 @@ durables:
   - path: "/opt/ob-durable.txt"
     copy_origin: false
     default_type: "file"
-  # - path: "/var/lib/mysql"
-  #   copy_origin: true
-  #   default_type: "directory"
+

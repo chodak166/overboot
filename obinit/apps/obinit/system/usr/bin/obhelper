@@ -1,8 +1,7 @@
 #!/bin/bash
 # Copyright (c) 2021  Lukasz Chodyla
-# Distributed under the Boost Software License v1.0.
-# See accompanying file LICENSE.txt or copy at
-# https://www.boost.org/LICENSE_1_0.txt for the full license.
+# Distributed under the MIT License.
+# See accompanying file LICENSE.txt for the full license.
 
 ## $SCRIPT_NAME $SCRIPT_VERSION
 ##
@@ -242,7 +241,7 @@ promptUser()
   prompt="$2"
   default="$3"
   echo -ne "$prompt [$default]: "
-  read -e input
+  read input
   if [[ -z "$input" ]]; then
     input="$default"
   fi

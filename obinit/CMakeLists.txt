@@ -10,10 +10,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 get_filename_component(OB_CMAKE_DIR ${CMAKE_CURRENT_LIST_DIR}/../cmake ABSOLUTE)
 get_filename_component(OB_OBINIT_DIR ${CMAKE_CURRENT_LIST_DIR} ABSOLUTE)
 
-add_subdirectory(libobinit)
+add_subdirectory(lib)
 add_subdirectory(apps/obinit)
 
-option(OB_BUILD_TESTS "Build tests" ON)
+option(OB_BUILD_TESTS "Build tests" OFF)
 if (${OB_BUILD_TESTS})
   enable_testing()
   add_subdirectory(tests/unit)

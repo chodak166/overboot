@@ -78,7 +78,7 @@ buildObinit()
     -v "$OBINIT_DIR":"$OBINIT_DIR" \
     -v "$OBINIT_DIR/../cmake":"$OBINIT_DIR/../cmake" \
     $DOCKER_BUILD_IMAGE /bin/bash -c <<EOC \
-" [ -d '$OBINIT_BUILD_DIR' ] && rm -r '$OBINIT_BUILD_DIR'; mkdir '$OBINIT_BUILD_DIR'; \
+" [ -d '$OBINIT_BUILD_DIR' ] && rm -r '$OBINIT_BUILD_DIR'; mkdir -p '$OBINIT_BUILD_DIR'; \
 cd '$OBINIT_BUILD_DIR' && \
 cmake -DOB_BUILD_TESTS=OFF -DPROJECT_VERSION_SUFFIX=-$(git rev-parse --short HEAD) '$OBINIT_DIR' && \
 cmake --build . -- -j4"
@@ -87,7 +87,7 @@ EOC
 
 installObinit()
 {
-  mkdir "$MNT_DIR"
+  mkdir -p "$MNT_DIR"
   echo -n "Mounting qcow2 drive... "
   guestmount -a "$VM_DIR/sysroot-${DEBIAN_SUITE}-overlay.qcow2" -m /dev/sda1 "$MNT_DIR"
   echo "done"
@@ -123,7 +123,7 @@ installObinit()
 initObRepository()
 {
   mntDir="$SCRIPT_DIR/mnt.$(date +%s)"
-  mkdir "$mntDir"
+  mkdir -p "$mntDir"
   mount "$VM_DIR/data.img" "$mntDir"
 
   mkdir "$mntDir/overboot" 2>/dev/null ||:

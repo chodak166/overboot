@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(obinit-bin LANGUAGES C VERSION 0.1.5)
+project(obinit-bin LANGUAGES C VERSION 0.1.6)
 
 set(C_STANDARD 11)
 set(TARGET obinit-bin)
@@ -36,15 +36,20 @@ endif()
 
 install (
   PROGRAMS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}
-  DESTINATION /sbin/
+  DESTINATION /sbin/ COMPONENT bin-obinit
   )
 
 install (
   DIRECTORY
   system/
-  DESTINATION /
+  DESTINATION / COMPONENT bin-obinit
   )
 
+install (
+  PROGRAMS
+  system/usr/share/initramfs-tools/scripts/local-bottom/obinit
+  DESTINATION /usr/share/initramfs-tools/scripts/local-bottom/ COMPONENT bin-obinit
+  )
 
 ################## PACKAGING #################
 

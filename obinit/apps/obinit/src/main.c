@@ -1,7 +1,6 @@
 // Copyright (c) 2021  Lukasz Chodyla
-// Distributed under the Boost Software License v1.0.
-// See accompanying file LICENSE.txt or copy at
-// https://www.boost.org/LICENSE_1_0.txt for the full license.
+// Distributed under the MIT License.
+// See accompanying file LICENSE.txt for the full license.
 
 #include "ObArgParser.h"
 #include "ob/ObInitTasks.h"

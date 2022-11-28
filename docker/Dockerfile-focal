@@ -1,0 +1,25 @@
+# Build:
+# docker build -t ob-focal -f Dockerfile-focal .
+#
+# Run:
+# docker run --rm -v $PWD/../:/usr/src/overboot -e OWNER=${UID} ob-focal
+
+FROM chodak166/dh-cmake:focal
+
+WORKDIR /usr/src
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt update && \
+  apt install -y \
+  libblkid-dev \
+  libyaml-dev
+
+VOLUME ["/usr/src/overboot"]
+
+ENV OWNER=1000
+ENV OUT_DIR=/usr/src/overboot/deb-focal
+
+COPY entrypoint.sh /
+
+ENTRYPOINT [ "/entrypoint.sh" ]
