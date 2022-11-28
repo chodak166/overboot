@@ -20,7 +20,7 @@
 4. [Management](#management)  
 5. [Testing with QEMU](#testing-with-qemu)  
 6. [Installation](#installation)  
-   6.1. [Debian/Ubuntu packages](#debianubuntu-packages)
+   6.1. [Debian/Ubuntu packages](#debianubuntu-packages)  
    6.2. [Manual build](#manual-build)
 7. [TODO](#todo)
 
@@ -68,7 +68,7 @@ If you need a layered file system to use after the system is already running, ju
 
 The script located in `/usr/share/initramfs-tools/scripts/local-botton/obinit` will be run by the updated `initramfs` image. This script runs the `obinit` binary, which will mount the overboot repository. It will then glue together the read-only layers in the correct order along with the mutable upper layer and mount it in `/root`, ultimately running as `/`. Take a look at the diagram below, illustrating an example of using an overboot device from the `/dev/sda2` partition over the root file system from `/dev/sda1`. The individual components are discussed in the following sections.
 
-![](img/overboot.svg)
+![Overboot diagram](img/overboot.svg)
 
 Any change made to files or directories that have not been marked as durable (see below) will be written to the upper layer, leaving the system layer and all intermediate layers untouched. See the OverlayFS documentation to learn more.
 
