@@ -11,7 +11,6 @@
 	2.3. [Layers](#layers)  
 	2.4. [Durables](#durables)  
 3. [Configuration](#configuration)  
-	3.1. [Rollback](#---)  
 	3.2. [Repository](#repository)  
 	3.3. [Upper layer](#upper-layer)  
 	3.4. [Adding durables](#adding-durables)  
